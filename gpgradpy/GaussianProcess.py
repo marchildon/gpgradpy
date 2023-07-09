@@ -125,8 +125,6 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
                  path_data_surr  = 'baye_data_surr',
                  surr_name       = 'obj_'):        
 
-        mean_fun_type = 'poly_ord_0'
-
         ''' Add inputs '''
         
         assert isinstance(dim, int),         'dim must be an integer'
@@ -163,7 +161,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
 
         ''' Set other parameters '''
         
-        self.set_mean_fun_op(mean_fun_type)
+        self.set_mean_fun_op(mean_fun_type = 'poly_ord_0')
 
         if self.wellcond_mtd == 'precon':
             self.b_use_cond_cstr = False
