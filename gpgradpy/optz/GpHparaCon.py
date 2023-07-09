@@ -48,8 +48,10 @@ class GpHparaCon:
             else:
                 return hp_min, hp_max
         
+        if i_optz == 0:
+            cstr_w_old_hp = False
+        
         if cstr_w_old_hp:
-            assert i_optz > 0, f'Must have i_optz > 0 but i_optz = {i_optz}'
             assert 0 < range_frac < 1, f'Must have 0 < range_frac < 1 but range_frac = {range_frac}'
             idx = i_optz - 1
         

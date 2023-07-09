@@ -228,7 +228,7 @@ class KernelSqExp:
 
     @staticmethod
     @jit(nopython=True)
-    def sq_exp_calc_KernBase_grad_th(KernBase, Rtensor, theta, hp_kernel):  
+    def sq_exp_calc_KernBase_grad_th(Rtensor, theta, hp_kernel):  
         '''
         Parameters
         ----------
@@ -240,9 +240,16 @@ class KernelSqExp:
             Derivative of KernBase wrt theta
         '''
         
-        ''' Check input parameters '''
+        ''' Calculate KernBase '''
         
-        assert np.max(np.diag(KernBase)) < (1.0 + 1e-8), 'The correlation matrix without an2 noise should be provided'
+        dim, n1, n2 = Rtensor.shape
+        exp_sum     = np.zeros((n1, n2))
+        Rtensor_sq  = Rtensor**2
+        
+        for i in range(dim):
+            exp_sum -= theta[i] * Rtensor_sq[i,:,:]
+        
+        KernBase = np.exp(exp_sum)
 
         ''' Calculate the gradient of the Kernel '''
 
@@ -250,7 +257,7 @@ class KernelSqExp:
         KernBase_grad_th = np.zeros(Rtensor.shape)
 
         for i in range(dim):
-            KernBase_grad_th[i,:,:] = -Rtensor[i,:,:]**2 * KernBase
+            KernBase_grad_th[i,:,:] = -Rtensor_sq[i,:,:] * KernBase
 
         return KernBase_grad_th
 

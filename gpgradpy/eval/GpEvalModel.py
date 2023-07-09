@@ -88,17 +88,16 @@ class GpEvalModel(GpMeanFun):
         Rtensor = self.calc_Rtensor(x_eval_scl, x2model, 1)
         if self.use_grad or calc_grad:
             Kgrad_yx = self.calc_KernGrad(Rtensor, theta, hp_kernel)
-    
-        if self.use_grad:
-            Kyx      = Kgrad_yx[:, :nx]
-            dKxy_dx  = Kgrad_yx[:, nx:].T
-        else:
-            if calc_grad:
+            
+            if self.use_grad:
+                Kyx      = Kgrad_yx[:, :nx]
+                dKxy_dx  = Kgrad_yx[:, nx:].T
+            else:
                 Kyx       = Kgrad_yx[:ny, :nx]
                 dKyx_dx   = Kgrad_yx[:ny, nx:]
                 dKxy_dx   = dKyx_dx.T
-            else:
-                Kyx       = Kgrad_yx
+        else:
+            Kyx = self.calc_KernBase(Rtensor, theta, hp_kernel)
         
         Kxy = Kyx.T
         
