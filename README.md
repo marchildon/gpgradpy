@@ -1,7 +1,7 @@
 # GpGradPy
  Gradient-enhanced Gaussian process
 
-This python package allows a user to build a gradient-free or a gradient-enhanced Gaussian process (GP). For an introduction to GPs the user can check "Gaussian processes for machine learning" at (https://gaussianprocess.org/gpml/chapters/RW.pdf).
+This python package allows a user to build a gradient-free or a gradient-enhanced Gaussian process (GP). For an introduction to GPs the user can reference "Gaussian processes for machine learning" at https://gaussianprocess.org/gpml/chapters/RW.pdf.
 
 ## Ill-conditioning problem for gradient-enhanced GPs
 
@@ -10,7 +10,7 @@ Gradient-enhanced GPs have covariance matrices that suffer from ill-conditioning
     "A Solution to the Ill-Conditioning of Gradient- Enhanced Covariance Matrices for Gaussian Processes" on arXiv
 
 To install the GpGradPy package cd to this directory and use the command "pip install ./"
-You can test out the package by running the files in the directory gpgradpy/plt
+You can test out the package by running the files in the directory gpgradpy/plt. The results in the paper "A Solution to the Ill-Conditioning of Gradient- Enhanced Covariance Matrices for Gaussian Processes" were run with Python 3.9.
 
 ## Abstract of latest paper
 
