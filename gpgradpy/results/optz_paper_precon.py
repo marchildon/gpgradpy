@@ -71,7 +71,7 @@ n_cases = len(list_test_case)
 
 for i_case in range(n_cases):
     str_test_case = list_test_case[i_case]
-    case_folder   = path.join(base_folder, str_test_case, 'NoiseFree')
+    case_folder   = path.join(base_folder, str_test_case)
     basefigname   = str_test_case
 
     if str_test_case == 'Rosen_a10_d2':
