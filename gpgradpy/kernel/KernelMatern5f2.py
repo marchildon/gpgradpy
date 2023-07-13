@@ -11,42 +11,8 @@ from numba import jit
 
 from . import KernelCommon
 
-class KernelMatern5f2:
+class KernelMatern5f2Base:
 
-    matern_5f2_hp_kernel_default = None
-    matern_5f2_range_hp_kernel   = [np.nan, np.nan]
-    
-    @staticmethod
-    def matern_5f2_theta2gamma(theta):
-        # Convert hyperparameter theta to gamma
-        return np.sqrt((5.0/3.0) * theta)
-    
-    @staticmethod
-    def matern_5f2_gamma2theta(gamma):
-        # Convert hyperparameter gamma to theta
-        return (3.0/5.0) * gamma**2
-
-    @staticmethod
-    def matern_5f2_Kern_precon(theta, n1, calc_grad = False, b_return_vec = False):
-        # Calculate the precondition matrix
-        
-        gamma    = KernelMatern5f2.matern_5f2_theta2gamma(theta)
-        pvec     = np.hstack((np.ones(n1), np.kron(gamma, np.ones(n1))))
-        pvec_inv = 1 / pvec
-        
-        gamma_grad_theta = 5.0 / (6.0 * gamma)
-        
-        grad_precon = KernelCommon.calc_grad_precon_matrix(n1, gamma_grad_theta, b_return_vec)
-        
-        if b_return_vec:
-            return pvec, pvec_inv, grad_precon
-        else:
-            return np.diag(pvec), np.diag(pvec_inv), grad_precon
-
-    @staticmethod
-    def matern_5f2_calc_nu_mat(theta, Rtensor_sq):
-        return np.sqrt(np.tensordot(theta, Rtensor_sq, axes=1))
-    
     @staticmethod
     @jit(nopython=True)
     def matern_5f2_calc_KernBase(Rtensor, theta, hp_kernel, nu_mat = None):
@@ -85,6 +51,94 @@ class KernelMatern5f2:
         KernBase = (1 + sqrt5 * nu_mat + (5.0/3.0) * nu_mat**2) * np.exp(-sqrt5 * nu_mat)
             
         return KernBase
+
+    @staticmethod
+    @jit(nopython=True)
+    def matern_5f2_calc_KernBase_hess_x(Rtensor, theta, hp_kernel):
+        '''
+        Parameters
+        ----------
+        See method sq_exp_calc_KernBase()
+
+        Returns
+        -------
+        KernBase_hess_x : 3d numpy array of floats
+            Derivative of KernBase wrt first set of nodal locations X
+        '''
+        
+        dim, n1, n2 = Rtensor.shape
+        nu_mat = np.zeros((n1, n2))
+        
+        for i in range(dim):
+            nu_mat += theta[i] * Rtensor[i,:,:]**2
+        
+        nu_mat = np.sqrt(nu_mat)
+        base   = np.exp(-np.sqrt(5) * nu_mat)
+        A      = (5/3) * (1 + np.sqrt(5) * nu_mat) * base
+        
+        KernBase_hess_x = np.zeros((dim, n1*dim, n2))
+        
+        for k in range(dim):
+            Rk_til = Rtensor[k,:,:] * theta[k]
+            
+            KernBase_hess_x[k, k*n1:(k+1)*n1, :] -= theta[k] * A 
+            
+            for i in range(dim):
+                th_i   = theta[i]
+                Ri_til = Rtensor[i,:,:] * th_i
+            
+                r1 = i * n1
+                r2 = r1 + n1
+                
+                KernBase_hess_x[k, r1:r2, :] += (25/3) * Ri_til * Rk_til * base
+                    
+        return KernBase_hess_x  
+
+    @staticmethod
+    @jit(nopython=True)
+    def matern_5f2_calc_KernBase_grad_th(Rtensor, theta, hp_kernel):
+        '''
+        Parameters
+        ----------
+        See method sq_exp_calc_KernBase()
+
+        Returns
+        -------
+        KernBase_grad_th : 3d numpy array of floats
+            Derivative of KernBase wrt theta
+        '''
+
+        dim, n1, n2 = Rtensor.shape
+        assert n1 == n2, 'n1 and n2 must match'
+        
+        nu_mat = np.zeros((n1, n1))
+        
+        for i in range(dim):
+            nu_mat += theta[i] * Rtensor[i,:,:]**2
+        
+        nu_mat = np.sqrt(nu_mat)
+        
+        # Take the inverse of nu_mat without causing error for values of zero
+        # Use 1e-16 as min value, does not change final calculations since
+        # nu_mat[i,j] is zero iff Rtensor[k,i,j] is zero for all 0<=k<=(dim-1) 
+        inv_nu_mat = 1 / (2*np.maximum(nu_mat, 1e-16))
+
+        sqrt5      = np.sqrt(5)
+        Rtensor_sq = Rtensor**2
+        KernBase   = (1 + sqrt5 * nu_mat + (5.0/3.0) * nu_mat**2) * np.exp(-sqrt5 * nu_mat)
+
+        KernBase_grad_th = np.zeros((dim, n1, n1))
+
+        for d in range(dim):
+            KernBase_grad_th[d,:,:] = -sqrt5 * Rtensor_sq[d,:,:] * inv_nu_mat * KernBase
+
+        return KernBase_grad_th
+    
+    @staticmethod
+    def matern_5f2_calc_KernBase_grad_alpha(*args):
+        raise Exception('There are no kernel hyperparameters for the Matern 5/2 kernel')
+
+class KernelMatern5f2Grad:
 
     @staticmethod
     @jit(nopython=True)
@@ -137,48 +191,6 @@ class KernelMatern5f2:
                 KernGrad[n1*(ic+1):n1*(ic+2), n2*(ir+1):n2*(ir+2)] += term
                 
         return KernGrad
-    
-    @staticmethod
-    @jit(nopython=True)
-    def matern_5f2_calc_KernBase_hess_x(Rtensor, theta, hp_kernel):
-        '''
-        Parameters
-        ----------
-        See method sq_exp_calc_KernBase()
-
-        Returns
-        -------
-        KernBase_hess_x : 3d numpy array of floats
-            Derivative of KernBase wrt first set of nodal locations X
-        '''
-        
-        dim, n1, n2 = Rtensor.shape
-        nu_mat = np.zeros((n1, n2))
-        
-        for i in range(dim):
-            nu_mat += theta[i] * Rtensor[i,:,:]**2
-        
-        nu_mat = np.sqrt(nu_mat)
-        base   = np.exp(-np.sqrt(5) * nu_mat)
-        A      = (5/3) * (1 + np.sqrt(5) * nu_mat) * base
-        
-        KernBase_hess_x = np.zeros((dim, n1*dim, n2))
-        
-        for k in range(dim):
-            Rk_til = Rtensor[k,:,:] * theta[k]
-            
-            KernBase_hess_x[k, k*n1:(k+1)*n1, :] -= theta[k] * A 
-            
-            for i in range(dim):
-                th_i   = theta[i]
-                Ri_til = Rtensor[i,:,:] * th_i
-            
-                r1 = i * n1
-                r2 = r1 + n1
-                
-                KernBase_hess_x[k, r1:r2, :] += (25/3) * Ri_til * Rk_til * base
-                    
-        return KernBase_hess_x  
 
     @staticmethod
     def matern_5f2_calc_KernGrad_grad_x(Rtensor, theta, hp_kernel):
@@ -249,46 +261,6 @@ class KernelMatern5f2:
                                      - np.sqrt(5) * inv_nu_mat * Ri_til * Rj_til * Rk_til) * base
         
         return KernGrad_grad_x  
-    
-    @staticmethod
-    @jit(nopython=True)
-    def matern_5f2_calc_KernBase_grad_th(Rtensor, theta, hp_kernel):
-        '''
-        Parameters
-        ----------
-        See method sq_exp_calc_KernBase()
-
-        Returns
-        -------
-        KernBase_grad_th : 3d numpy array of floats
-            Derivative of KernBase wrt theta
-        '''
-
-        dim, n1, n2 = Rtensor.shape
-        assert n1 == n2, 'n1 and n2 must match'
-        
-        nu_mat = np.zeros((n1, n1))
-        
-        for i in range(dim):
-            nu_mat += theta[i] * Rtensor[i,:,:]**2
-        
-        nu_mat = np.sqrt(nu_mat)
-        
-        # Take the inverse of nu_mat without causing error for values of zero
-        # Use 1e-16 as min value, does not change final calculations since
-        # nu_mat[i,j] is zero iff Rtensor[k,i,j] is zero for all 0<=k<=(dim-1) 
-        inv_nu_mat = 1 / (2*np.maximum(nu_mat, 1e-16))
-
-        sqrt5      = np.sqrt(5)
-        Rtensor_sq = Rtensor**2
-        KernBase   = (1 + sqrt5 * nu_mat + (5.0/3.0) * nu_mat**2) * np.exp(-sqrt5 * nu_mat)
-
-        KernBase_grad_th = np.zeros((dim, n1, n1))
-
-        for d in range(dim):
-            KernBase_grad_th[d,:,:] = -sqrt5 * Rtensor_sq[d,:,:] * inv_nu_mat * KernBase
-
-        return KernBase_grad_th
     
     @staticmethod
     @jit(nopython=True)
@@ -367,11 +339,44 @@ class KernelMatern5f2:
                     KernGrad_grad_th[d, c1:c2, r1:r2] += term
                 
         return KernGrad_grad_th
-            
-    @staticmethod
-    def matern_5f2_calc_KernBase_grad_alpha(*args):
-        raise Exception('There are no kernel hyperparameters for the Matern 5/2 kernel')
         
     @staticmethod
     def matern_5f2_calc_KernGrad_grad_alpha(*args):
         raise Exception('There are no kernel hyperparameters for the Matern 5/2 kernel')
+        
+class KernelMatern5f2(KernelMatern5f2Base, KernelMatern5f2Grad):
+
+    matern_5f2_hp_kernel_default = None
+    matern_5f2_range_hp_kernel   = [np.nan, np.nan]
+    
+    @staticmethod
+    def matern_5f2_theta2gamma(theta):
+        # Convert hyperparameter theta to gamma
+        return np.sqrt((5.0/3.0) * theta)
+    
+    @staticmethod
+    def matern_5f2_gamma2theta(gamma):
+        # Convert hyperparameter gamma to theta
+        return (3.0/5.0) * gamma**2
+
+    @staticmethod
+    def matern_5f2_Kern_precon(theta, n1, calc_grad = False, b_return_vec = False):
+        # Calculate the precondition matrix
+        
+        gamma    = KernelMatern5f2.matern_5f2_theta2gamma(theta)
+        pvec     = np.hstack((np.ones(n1), np.kron(gamma, np.ones(n1))))
+        pvec_inv = 1 / pvec
+        
+        gamma_grad_theta = 5.0 / (6.0 * gamma)
+        
+        grad_precon = KernelCommon.calc_grad_precon_matrix(n1, gamma_grad_theta, b_return_vec)
+        
+        if b_return_vec:
+            return pvec, pvec_inv, grad_precon
+        else:
+            return np.diag(pvec), np.diag(pvec_inv), grad_precon
+
+    @staticmethod
+    def matern_5f2_calc_nu_mat(theta, Rtensor_sq):
+        return np.sqrt(np.tensordot(theta, Rtensor_sq, axes=1))
+    
