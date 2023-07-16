@@ -17,7 +17,7 @@ class CommonFun:
         '''
         Parameters
         ----------
-        Xmat : 2D numpy array of size [nx, dim]
+        Xmat : 2D numpy array of size [n_eval, dim]
             Each row is one point in the parameter space.
         Returns
         -------
@@ -25,12 +25,12 @@ class CommonFun:
             Min dist between data points.
         '''
         
-        nx = Xmat.shape[0]
+        n_eval = Xmat.shape[0]
         
-        if nx == 1:
+        if n_eval == 1:
             return np.nan
         else:
-            x_dist = cdist(Xmat, Xmat, 'euclidean') + np.diag(np.full(nx, np.nan))
+            x_dist = cdist(Xmat, Xmat, 'euclidean') + np.diag(np.full(n_eval, np.nan))
             return np.nanmin(x_dist)
     
     @staticmethod
@@ -38,16 +38,16 @@ class CommonFun:
         '''
         Parameters
         ----------
-        Xmat : 2D numpy array of size [nx, dim]
+        Xmat : 2D numpy array of size [n_eval, dim]
             Each row is one point in the parameter space.
         Returns
         -------
         dist_max : float
             Max dist between data points.
         '''
-        nx = Xmat.shape[0]
+        n_eval = Xmat.shape[0]
         
-        if nx == 1:
+        if n_eval == 1:
             return np.nan
         else:
             x_dist = cdist(Xmat, Xmat, 'euclidean')
@@ -153,10 +153,10 @@ class CommonFun:
         '''
         Parameters
         ----------
-        fval : 1D numpy array of length nx
-            Function evaluation at nx points.
-        fgrad : 2D numpy array of size [nx, dim], optional
-            Gradient evaluations at nx points
+        fval : 1D numpy array of length n_eval
+            Function evaluation at n_eval points.
+        fgrad : 2D numpy array of size [n_eval, dim], optional
+            Gradient evaluations at n_eval points
 
         Returns
         -------

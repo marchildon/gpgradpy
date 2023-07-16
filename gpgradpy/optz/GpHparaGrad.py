@@ -18,7 +18,7 @@ class GpHparaGrad:
             Info on the numerical optimization of the hyperparameters.
         hp_vals : HparaOptzVal from GpHpara
             Class that contains all of the hyperparameters
-        Rtensor : 3D numpy array of floats of shape [dim, nx, nx]
+        Rtensor : 3D numpy array of floats of shape [dim, n_data, n_data]
             Distance between two sets of nodes along all dim coordinates.
 
         Returns
@@ -63,7 +63,7 @@ class GpHparaGrad:
             Info on the numerical optimization of the hyperparameters.
         hp_vals : HparaOptzVal from GpHpara
             Class that contains all of the hyperparameters
-        Rtensor : 3D numpy array of floats of shape [dim, nx, nx]
+        Rtensor : 3D numpy array of floats of shape [dim, n_data, n_data]
             Distance between two sets of nodes along all dim coordinates.
 
         Returns

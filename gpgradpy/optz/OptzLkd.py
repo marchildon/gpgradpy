@@ -42,7 +42,6 @@ class OptzLkd(CalcLkd):
             gradient of cond_val.
         '''
         
-        # Set always_calc_cond to True to override self.b_use_cond_cstr
         hp_vec = np.atleast_1d(hp_vec).ravel() 
         
         # Check if the likelihood and its gradient have already been calculated
@@ -324,12 +323,12 @@ class OptzLkd(CalcLkd):
         
         ''' Calculate the final condition number '''
         
-        x_scl, dist_all_scl = self.get_scl_x_w_dist()
+        x_scl, Rtensor = self.get_scl_x_w_dist()
         best_hp_vals = self.hp_vec2dataclass(self.hp_info_optz_lkd, best_hp)
         
         if self.b_has_noisy_data:
-            cond_val = self.calc_all_K_w_chofac(dist_all_scl, best_hp_vals, calc_chofac = False, calc_cond = True)[-1]
+            cond_val = self.calc_all_K_w_chofac(Rtensor, best_hp_vals, calc_chofac = False, calc_cond = True)[-1]
         else:
-            cond_val = self.calc_Kern_w_chofac(dist_all_scl, best_hp_vals, calc_chofac = False, calc_cond = True)[-1]
+            cond_val = self.calc_Kern_w_chofac(Rtensor, best_hp_vals, calc_chofac = False, calc_cond = True)[-1]
         
         return best_hp, cond_val, surr_optz_info

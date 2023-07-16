@@ -16,7 +16,7 @@ from gpgradpy import GaussianProcess
 
 ''' Set options '''
 
-nx          = 10
+n_eval          = 10
 cond_max    = 1e10 # Maximum condition number
 
 # Plotting options
@@ -44,8 +44,8 @@ lvl_cond    = np.linspace(0, 12, 7)
 def calc_obj(xy, a = 10):
     # Rosenbrock function eval
     
-    nx, dim = xy.shape
-    obj = np.zeros(nx)
+    n_eval, dim = xy.shape
+    obj = np.zeros(n_eval)
     
     for d in range(dim-1):
         obj += a*(xy[:,d+1] - xy[:,d]**2)**2 + (1 - xy[:,d])**2
@@ -55,9 +55,9 @@ def calc_obj(xy, a = 10):
 def calc_grad(xy, a = 10):
     # Rosenbrock function grad
     
-    nx, dim = xy.shape
+    n_eval, dim = xy.shape
     
-    grad = np.zeros([nx, dim])
+    grad = np.zeros([n_eval, dim])
 
     x1        = xy[:,0]
     x2        = xy[:,1]
@@ -85,13 +85,13 @@ if path.exists(folder_all) is False:
 # squared exponential kernel. This nugget is used for all kernels and all 
 # wellcond_mtd methods 
 GP     = GaussianProcess(dim, use_grad = True, kernel_type = 'SqExp', wellcond_mtd = 'precon')
-nugget = GP.calc_nugget(nx)[1]
+nugget = GP.calc_nugget(n_eval)[1]
 
-def make_lhs(para_min, para_max, nx):
+def make_lhs(para_min, para_max, n_eval):
     
     para_limit      = np.array([para_min, para_max]).T
     xdata_sampling  = LHS(xlimits=para_limit, random_state = 2)
-    x_eval          = xdata_sampling(nx) 
+    x_eval          = xdata_sampling(n_eval) 
     
     return x_eval
 
@@ -100,7 +100,7 @@ center    = 1.0
 factor    = 1e-2
 para_min  = center - factor * np.ones(dim)
 para_max  = center + factor * np.ones(dim)
-x_eval    = make_lhs(para_min, para_max, nx)
+x_eval    = make_lhs(para_min, para_max, n_eval)
 
 # Evaluate the function of interest
 obj_eval  = calc_obj(x_eval)
@@ -113,8 +113,8 @@ para_tick_loc = 10**np.arange(np.log10(range_gamma[0]), np.log10(range_gamma[1])
 
 # Print info 
 dist_x_eval = distance.cdist(x_eval, x_eval, 'euclidean')
-dist_min    = np.nanmin(dist_x_eval + np.diag(np.full(nx, np.nan)))
-print(f'dim = {dim}, nx = {nx}, nugget = {nugget:.2e}, dist_min = {dist_min:.2e}')
+dist_min    = np.nanmin(dist_x_eval + np.diag(np.full(n_eval, np.nan)))
+print(f'dim = {dim}, n_eval = {n_eval}, nugget = {nugget:.2e}, dist_min = {dist_min:.2e}')
 
 def calc_n_plot(use_grad, kernel_type, wellcond_mtd):
     
@@ -123,9 +123,9 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd):
     ''' Create the GP and evaluate the surrogate'''
     
     if use_grad:
-        base_file_name = f'Kern_{kernel_type}_mtd_{wellcond_mtd}_grad_T_n{nx}.png'
+        base_file_name = f'Kern_{kernel_type}_mtd_{wellcond_mtd}_grad_T_n{n_eval}.png'
     else:
-        base_file_name = f'Kern_{kernel_type}_grad_F_n{nx}.png'
+        base_file_name = f'Kern_{kernel_type}_grad_F_n{n_eval}.png'
         assert wellcond_mtd is None, 'If use_grad is False, then wellcond_mtd must be None'
         
     GP = GaussianProcess(dim, use_grad, kernel_type, wellcond_mtd)

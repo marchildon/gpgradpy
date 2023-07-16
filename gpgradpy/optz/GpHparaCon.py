@@ -151,7 +151,7 @@ class GpHparaCon:
     def calc_cond_L2_w_grad(self, Kmat_w_eta, Kmat_grad_hp = None):
         assert Kmat_w_eta[0,0] > 1, 'Kmat_w_eta should have diagonal entries greater than 1 since it contains the noise'
 
-        nx   = Kmat_w_eta.shape[0]
+        n_data = Kmat_w_eta.shape[0]
         cond = np.linalg.cond(Kmat_w_eta, p=2)
         
         if Kmat_grad_hp is None:
@@ -160,7 +160,7 @@ class GpHparaCon:
             assert self.wellcond_mtd != 'precon', 'Not setup to calculate the gradient of the condition number if wellcond_mtd = "precon" '
             
             nder = Kmat_grad_hp.shape[0]
-            assert nx == Kmat_grad_hp.shape[1] == Kmat_grad_hp.shape[2], 'Shape of Kmat_grad_hp is incompatible'
+            assert n_data == Kmat_grad_hp.shape[1] == Kmat_grad_hp.shape[2], 'Shape of Kmat_grad_hp is incompatible'
     
             eigval_all, eigvec_all = np.linalg.eig(Kmat_w_eta)
             
@@ -189,7 +189,7 @@ class GpHparaCon:
             #     return cond, cond_grad
     
             # try:
-            #     eig_max, v_max = linalg.eigh(Kmat_w_eta, eigvals=[nx-1,nx-1])
+            #     eig_max, v_max = linalg.eigh(Kmat_w_eta, eigvals=[n_data-1,n_data-1])
             # except:
             #     if eig_max.size == 0:
             #         try:

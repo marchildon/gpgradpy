@@ -16,7 +16,7 @@ class GpMeanFunPoly:
         '''
         Parameters
         ----------
-        x2model : 2D numpy array of size [nx, dim]
+        x2model : 2D numpy array of size [n2model, dim]
             Points at which the mean function is to be evaluated.
         beta_vec : 1D numpy array
             Coefficients for the mean function.
@@ -113,7 +113,7 @@ class GpMeanFunPoly:
         '''
         Parameters
         ----------
-        x2model : 2D numpy array of size [nx, dim]
+        x2model : 2D numpy array of size [n2model, dim]
             Points at which the Vandermonde matrix is to be evaluated.
         calc_grad : bool, optional
             Set to True to calculate the gradient of the Vandermonde matrix 
@@ -132,15 +132,15 @@ class GpMeanFunPoly:
             Hessian of the Vandermonde matrix.
         '''
         
-        nx = x2model.shape[0]
+        n2model = x2model.shape[0]
         
-        vand_base = np.full((nx, self.n_beta_coeff), np.nan)
+        vand_base = np.full((n2model, self.n_beta_coeff), np.nan)
         
         if calc_grad:
-            vand_grad = np.zeros((self.dim, nx, self.n_beta_coeff))
+            vand_grad = np.zeros((self.dim, n2model, self.n_beta_coeff))
             
             if calc_hess:
-                vand_hess = np.zeros((self.dim, self.dim, nx, self.n_beta_coeff))
+                vand_hess = np.zeros((self.dim, self.dim, n2model, self.n_beta_coeff))
             else:
                 vand_hess = None
         else:
@@ -159,13 +159,13 @@ class GpMeanFunPoly:
     
     def calc_aug_vand(self, x2model = None):
         
-        nx, dim = x2model.shape
+        n2model, dim = x2model.shape
         
         assert dim == self.dim, 'Unexpected shape for x2model'
         
         if self.use_grad:
             vand_base, vand_grad = self.calc_vand(x2model, calc_grad = True)[:2]
-            vand_aug = np.vstack((vand_base, vand_grad.reshape((nx*dim, self.n_beta_coeff))))
+            vand_aug = np.vstack((vand_base, vand_grad.reshape((n2model*dim, self.n_beta_coeff))))
         else:
             vand_aug = self.calc_vand(x2model, calc_grad = False)[0]
         

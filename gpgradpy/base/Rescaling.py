@@ -98,7 +98,7 @@ class RescalingXdata:
         # Initial scaling of data
         x_scl_v1 = (self.x_init - x_shift[None,:]) * xvec_scale_in[None,:]
         
-        if (self.nx == 1) or (self.x_scl_method is None):
+        if (self.n_eval == 1) or (self.x_scl_method is None):
             coeff_x_scl = 1
             # x_shift     = np.zeros(self.dim)
         elif self.x_scl_method == 'set_vmin':
@@ -336,8 +336,8 @@ class RescalingNonlincon:
         else:
             nlc_shift = np.zeros(self.nlc_n)
         
-        nx = self.x_init.shape[0]
-        if (nx == 1) or (self.nlc_scl_method is None):
+        n_eval = self.x_init.shape[0]
+        if (n_eval == 1) or (self.nlc_scl_method is None):
             nlc_scale = 1
         elif self.nlc_scl_method == 'obj_scl':
             assert self._obj_data_set, 'Must call set_obj_data prior to this method'
@@ -430,13 +430,13 @@ class Rescaling(RescalingXdata, RescalingLincon, RescalingObjData, RescalingNonl
         assert x_scl_method in self.x_scl_method_avail, f'Requested x_scl_method = {x_scl_method} is not available'
         
         self._xdata_set   = True
-        self.nx, self.dim = x_init.shape
+        self.n_eval, self.dim = x_init.shape
         
         # Store init data
         self.x_init       = x_init
         
         if idx_xbest is None:
-            idx_xbest = self.nx -1
+            idx_xbest = self.n_eval -1
             
         self.idx_xbest    = idx_xbest
         
@@ -460,7 +460,7 @@ class Rescaling(RescalingXdata, RescalingLincon, RescalingObjData, RescalingNonl
         
         assert self._xdata_set, 'Must call the method set_xdata prior to set_obj_data'
         assert obj_scl_method in self.obj_scl_method_avail, f'Requested obj_scl_method = {obj_scl_method} is not available'
-        assert self.nx == obj_init.size, 'Dimension of nx = {self.nx} do not match with size of obj_init: {obj_init.size}'
+        assert self.n_eval == obj_init.size, 'Dimension of n_eval = {self.n_eval} do not match with size of obj_init: {obj_init.size}'
         
         self._obj_data_set   = True
         
@@ -487,9 +487,9 @@ class Rescaling(RescalingXdata, RescalingLincon, RescalingObjData, RescalingNonl
         
     def set_nlc_data(self, nlc_val_init, nlc_std_val_init, nlc_grad_init, nlc_std_grad_init, use_nlc_shift = False, nlc_scl_method = 'dflt_max'):
         
-        nx, self.nlc_n = nlc_val_init.shape
+        n_eval, self.nlc_n = nlc_val_init.shape
         assert self._xdata_set, 'Must call the method set_xdata prior to set_obj_data'
-        assert nx == self.nx, f'Unecpected shape for nlc_val_init of {nlc_val_init.shape} when nx = {nx}'
+        assert n_eval == self.n_eval, f'Unecpected shape for nlc_val_init of {nlc_val_init.shape} when n_eval = {n_eval}'
         assert nlc_scl_method in self.nlc_scl_method_avail, f'Requested nlc_scl_method = {nlc_scl_method} is not available'
         
         self._nlc_data_set      = True
