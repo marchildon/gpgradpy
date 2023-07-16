@@ -424,21 +424,25 @@ class Rescaling(RescalingXdata, RescalingLincon, RescalingObjData, RescalingNonl
     nlc_shift  = np.nan
     nlc_scale  = np.nan
     
-    def __init__(self, idx_xbest, x_init, use_x_shift = True, x_scl_method = None, dist_set = None):
+    def __init__(self, x_init, idx_xbest = None, use_x_shift = True, x_scl_method = None, dist_set = None):
         
         assert x_init.ndim == 2, f'x_init needs to be 2D but it has the shape {x_init.shape}'
         assert x_scl_method in self.x_scl_method_avail, f'Requested x_scl_method = {x_scl_method} is not available'
         
-        self._xdata_set     = True
-        self.nx, self.dim   = x_init.shape
+        self._xdata_set   = True
+        self.nx, self.dim = x_init.shape
         
         # Store init data
-        self.idx_xbest      = idx_xbest
-        self.x_init         = x_init
+        self.x_init       = x_init
         
-        self.use_x_shift    = use_x_shift
-        self.x_scl_method   = x_scl_method
-        self.dist_set       = dist_set # If None then either vmin_dflt or vmax_dflt is used
+        if idx_xbest is None:
+            idx_xbest = self.nx -1
+            
+        self.idx_xbest    = idx_xbest
+        
+        self.use_x_shift  = use_x_shift
+        self.x_scl_method = x_scl_method
+        self.dist_set     = dist_set # If None then either vmin_dflt or vmax_dflt is used
         
         # Calculate and set scaling parameters
         self.set_xscale_data()
