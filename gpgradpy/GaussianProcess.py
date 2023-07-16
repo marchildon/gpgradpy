@@ -103,27 +103,47 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     b_optz_var_fval  = None
     b_optz_var_fgrad = None
     
-    _cond_val       = np.nan
-    _cond_grad      = np.nan
+    _cond_val        = np.nan
+    _cond_grad       = np.nan
     
     # Initial data    
-    _x_eval_in      = None
-    _fval_in        = None
-    _std_fval_in    = None
-    _grad_in        = None
-    _std_grad_in    = None
-    _idx_xbest      = None 
+    _x_eval_in       = None
+    _fval_in         = None
+    _std_fval_in     = None
+    _grad_in         = None
+    _std_grad_in     = None
+    _bvec_use_grad   = None
     
     # Initiate timers
     _time_chofac    = 0
 
     def __init__(self, dim, use_grad,
-                 kernel_type     = 'SqExp',
-                 wellcond_mtd    = 'precon',
-                 #
-                 folder_name     = None,
-                 path_data_surr  = 'baye_data_surr',
-                 surr_name       = 'obj_'):        
+                 kernel_type    = 'SqExp',
+                 wellcond_mtd   = 'precon',
+                 path_data_surr = 'baye_data_surr',
+                 surr_name      = 'obj_'):
+        '''
+        Parameters
+        ----------
+        dim : int
+            Dimension of the parameter space.
+        use_grad : bool
+            True if gradients will be provided.
+        kernel_type : str, optional
+            Indicates the type of kernel to use. See the class Kernel for all 
+            options. The default is 'SqExp'.
+        wellcond_mtd : str, optional
+            Indicates the method used to overcome the ill-conditioning of the 
+            covariance matrix. The default is 'precon'.
+        path_data_surr : str, optional
+            Full path with the name of file to save the data from the GP. 
+            The default is 'baye_data_surr'.
+        surr_name : str, optional
+            When saving the data this string is prepended to the variable 
+            names, see the class GpParaDef. This is used if there are several 
+            GPs that are constructed. For example when there is an objective 
+            and nonlinear constraints. The default is 'obj_'.
+        '''
 
         ''' Add inputs '''
         
@@ -149,15 +169,10 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         
         ''' Setup for the path to the data '''
         
-        if folder_name is None:
-            path_data_surr_all  = path_data_surr
-        else:
-            path_data_surr_all  = path.join(folder_name, path_data_surr)
-        
-        self.path_surr_txt      = path_data_surr_all + '.txt'
-        self.path_surr_old_txt  = path_data_surr_all + '_old.txt'
-        self.path_surr_npz      = path_data_surr_all + '.npz'
-        self.path_surr_old_npz  = path_data_surr_all + '_old.npz'
+        self.path_surr_txt      = path_data_surr + '.txt'
+        self.path_surr_old_txt  = path_data_surr + '_old.txt'
+        self.path_surr_npz      = path_data_surr + '.npz'
+        self.path_surr_old_npz  = path_data_surr + '_old.npz'
 
         ''' Set other parameters '''
         
@@ -176,65 +191,83 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         else:
             self.b_use_data_scl = False
         
-    def set_data(self, x_eval_in, fval_in, std_fval_in, 
-                 grad_in = None, std_grad_in = None, idx_xbest = None):
+    def set_data(self, x_eval, fval, std_fval, 
+                 grad = None, std_grad = None, bvec_use_grad = None):
+        '''
+        Parameters
+        ----------
+        x_eval : 2D numpy array of size [n_eval, dim]
+            Evaluations points.
+        fval : 1D numpy array of length n_eval
+            Function evaluation at the rows in x_eval.
+        std_fval : 1D numpy array of length n_eval
+            Standard deviations for the uncertainty in the evaluation of fval.
+        grad : 2D numpy array of size [n_eval, dim], optional
+            Gradient evaluations at the rows of x_eval. The default is None.
+        std_grad : 2D numpy array of size [n_eval, dim], optional
+            Standard deviations for the uncertainty in the evaluation of grad. 
+            The default is None.
+        bvec_use_grad : 1D numpy array of bool of length n_eval, optional
+            Indicates which gradients in grad are used to construct the 
+            surrogate. The default is None, in which case all gradients are used.
+        '''
         
         ''' Check inputs '''
         
-        n_eval  = x_eval_in.shape[0]
-        fval_in = np.atleast_1d(fval_in).ravel()
+        n_eval = x_eval.shape[0]
+        fval   = np.atleast_1d(fval).ravel()
         
-        assert x_eval_in.ndim == 2, f'x_eval_in must be a 2 array but x_eval_in.ndim = {x_eval_in.ndim}'
-        assert n_eval == fval_in.size, 'No. of points do not match with x_eval and fval'
+        assert x_eval.ndim == 2, f'x_eval must be a 2 array but x_eval.ndim = {x_eval.ndim}'
+        assert n_eval == fval.size, 'No. of points do not match with x_eval and fval'
         
-        if (std_fval_in is None) or np.any(np.isnan(std_fval_in)):
+        if (std_fval is None) or np.any(np.isnan(std_fval)):
             self.known_eps_fval = False
         else:
             self.known_eps_fval = True
-            std_fval_in = np.atleast_1d(std_fval_in).ravel()
-            assert n_eval == std_fval_in.size, f'Size of std_fval is {std_fval_in.size} while it should be {n_eval}'
+            std_fval = np.atleast_1d(std_fval).ravel()
+            assert n_eval == std_fval.size, f'Size of std_fval is {std_fval.size} while it should be {n_eval}'
         
-        if grad_in is None:
+        if grad is None:
             assert self.use_grad is False, 'No grad info provided but use_grad was set to True'
             self.has_grad_info   = False
             self.known_eps_fgrad = False
         else:
             assert self.use_grad, 'Grad info provided but use_grad was set to False'
             self.has_grad_info = True
-            assert grad_in.ndim == 2, f'grad_in must be a 2 array but grad_in.ndim = {grad_in.ndim}'
+            assert grad.ndim == 2, f'grad must be a 2 array but grad.ndim = {grad.ndim}'
             
-            assert grad_in.shape == x_eval_in.shape, 'Shape of grad does not match x_eval'
+            assert grad.shape == x_eval.shape, 'Shape of grad does not match x_eval'
             
-            if (std_grad_in is None) or np.any(np.isnan(std_grad_in)):
+            if (std_grad is None) or np.any(np.isnan(std_grad)):
                 self.known_eps_fgrad = False
             else:
                 self.known_eps_fgrad = True
-                assert std_grad_in.ndim == 2, f'std_grad_in must be a 2 array but std_grad_in.ndim = {std_grad_in.ndim}'
-                assert grad_in.shape == std_grad_in.shape, 'Shape of grad does not match std_grad'
-        
-        # For constrained optz the best sol so far is the one with the lowest 
-        # merit function, which may not match with the point with the smallest 
-        # objective. If idx_xbest is not provided then it is calculated below
-        if idx_xbest is None:
-            idx_xbest = np.argmin(fval_in)
+                assert std_grad.ndim == 2, f'std_grad must be a 2 array but std_grad.ndim = {std_grad.ndim}'
+                assert grad.shape == std_grad.shape, 'Shape of grad does not match std_grad'
         
         ''' Store input data '''
         
-        self.n_eval          = fval_in.size
+        self._x_eval_in     = x_eval
+        self._fval_in       = fval
+        self._std_fval_in   = std_fval if self.known_eps_fval  else None
+        self._grad_in       = grad 
+        self._std_grad_in   = std_grad if self.known_eps_fgrad else None
+        self._bvec_use_grad = bvec_use_grad
         
-        self._x_eval_in      = x_eval_in
-        self._fval_in        = fval_in
-        self._std_fval_in    = std_fval_in if self.known_eps_fval  else None
-        self._grad_in        = grad_in 
-        self._std_grad_in    = std_grad_in if self.known_eps_fgrad else None
+        self.n_eval = fval.size
         
-        self._idx_xbest      = idx_xbest
+        if bvec_use_grad is None:
+            self.n_grad = self.n_eval 
+        else:
+            assert bvec_use_grad.size == self.n_grad, \
+                f'Length of bvec_use_grad is {bvec_use_grad.size} but it should be n_eval = {self.n_eval}'
+            self.n_grad = np.sum(bvec_use_grad)
         
         ''' Check if the data is noisy and if its variance is known '''
         
         if self.known_eps_fval:
             self.b_optz_var_fval    = False 
-            self.b_fval_zero        = True if (np.max(std_fval_in) < 1e-10) else False
+            self.b_fval_zero        = True if (np.max(std_fval) < 1e-10) else False
         else:
             self.b_optz_var_fval    = True 
             self.b_fval_zero        = False
@@ -244,7 +277,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             self.b_fgrad_zero       = True
         elif self.known_eps_fgrad:
             self.b_optz_var_fgrad   = False 
-            self.b_fgrad_zero       = True if (np.max(std_grad_in) < 1e-10) else False
+            self.b_fgrad_zero       = True if (np.max(std_grad) < 1e-10) else False
         else:
             self.b_optz_var_fgrad   = True 
             self.b_fgrad_zero       = False
@@ -263,7 +296,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         # Data related to rescaling to help with the condition number 
         vreq = self.calc_vreq(n_eval, self.dim)
         
-        self._vmin_init     = self.calc_dist_min(x_eval_in)
+        self._vmin_init     = self.calc_dist_min(x_eval)
         self._vmin_req_grad = vreq
         
         self.setup_hp_idx4optz()
@@ -284,12 +317,10 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             else:
                 raise Exception(f'Unknown method wellcond_mtd = {self.wellcond_mtd}')
             
-            self.DataScl = Rescaling(idx_xbest, x_eval_in, 
-                                      x_scl_method = x_scl_method, dist_set = dist_set)
-        
-            self.DataScl.set_obj_data(fval_in, std_fval_in, grad_in, std_grad_in)
+            self.DataScl = Rescaling(x_eval, x_scl_method = x_scl_method, dist_set = dist_set)
+            self.DataScl.set_obj_data(fval, std_fval, grad, std_grad)
         else:
-            self.Rtensor_init = self.calc_Rtensor(x_eval_in, x_eval_in, 1)
+            self.Rtensor_init = self.calc_Rtensor(x_eval, x_eval, 1)
             
     def set_hpara(self, method2set_hp, i_optz, hp_vals = None):
         
