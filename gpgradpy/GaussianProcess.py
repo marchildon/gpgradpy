@@ -7,7 +7,6 @@ Created on Mon Aug 24 13:00:59 2020
 """
 
 import numpy as np
-from os import path
 from scipy.optimize import NonlinearConstraint
 
 from .base   import Rescaling
@@ -55,8 +54,8 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
                           'dflt_vmax']     # set max xdist to dist_max_dflt
 
     set_eta_mtd_dflt    = 'Kbase_eta' # Used if selected wellcond_mtd does not have a default method, ie wellcond_mtd == None
-                                      # 'Kbase_eta' : Use req eta for Kbase, ie eta =  nx / (condmax - 1)
-                                      # 'Kbase_eta_w_dim' : Use eta =  nx (dim + 1) / (condmax - 1)
+                                      # 'Kbase_eta' : Use req eta for Kbase, ie eta =  n_eval / (condmax - 1)
+                                      # 'Kbase_eta_w_dim' : Use eta =  n_eval (dim + 1) / (condmax - 1)
                                       # 'dflt_eta'  : min_nugget_dflt is used
 
     cond_max            = 1e10  # Used for the optz constraint of the hyperparameters
@@ -112,7 +111,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     _std_fval_in     = None
     _grad_in         = None
     _std_grad_in     = None
-    _bvec_use_grad   = None
+    bvec_use_grad    = None
     
     # Initiate timers
     _time_chofac    = 0
@@ -161,7 +160,6 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             wellcond_mtd = None
         
         self.wellcond_mtd    = wellcond_mtd
-        
         self.path_data_surr  = path_data_surr
         self.surr_name       = surr_name
         
@@ -210,11 +208,35 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         bvec_use_grad : 1D numpy array of bool of length n_eval, optional
             Indicates which gradients in grad are used to construct the 
             surrogate. The default is None, in which case all gradients are used.
+            The default is None.
         '''
         
         ''' Check inputs '''
         
-        n_eval = x_eval.shape[0]
+        # Calculate the no. of function evaluations and gradients to use
+        n_eval = fval.size
+        
+        if self.use_grad:
+            if bvec_use_grad is None:
+                n_grad = n_eval 
+            else:
+                n_grad = np.sum(bvec_use_grad)
+                assert self.b_use_data_scl == False, 'The class Rescaling is not setup for the case when not all gradients are used'
+                assert bvec_use_grad.size == n_eval, \
+                    f'Length of bvec_use_grad is {bvec_use_grad.size} but it should be n_eval = {n_eval}'
+                assert grad.shape[0] == n_grad, \
+                    f'No. of rows of grad is {grad.shape[0]} but it should be n_grad = {n_grad}'
+                assert std_grad.shape[0] == n_grad, \
+                    f'No. of rows of std_grad is {std_grad.shape[0]} but it should be n_grad = {n_grad}'
+        else:
+            assert bvec_use_grad is None, 'bvec_use_grad must be None if grads are not used for the GP'
+            n_grad = 0
+            
+        
+        self.n_eval = n_eval
+        self.n_grad = n_grad
+        self.n_data = n_eval + n_grad * self.dim
+        
         fval   = np.atleast_1d(fval).ravel()
         
         assert x_eval.ndim == 2, f'x_eval must be a 2 array but x_eval.ndim = {x_eval.ndim}'
@@ -236,7 +258,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             self.has_grad_info = True
             assert grad.ndim == 2, f'grad must be a 2 array but grad.ndim = {grad.ndim}'
             
-            assert grad.shape == x_eval.shape, 'Shape of grad does not match x_eval'
+            assert grad.shape == (n_grad, self.dim), 'Shape of grad does not match x_eval'
             
             if (std_grad is None) or np.any(np.isnan(std_grad)):
                 self.known_eps_fgrad = False
@@ -252,16 +274,8 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         self._std_fval_in   = std_fval if self.known_eps_fval  else None
         self._grad_in       = grad 
         self._std_grad_in   = std_grad if self.known_eps_fgrad else None
-        self._bvec_use_grad = bvec_use_grad
         
-        self.n_eval = fval.size
-        
-        if bvec_use_grad is None:
-            self.n_grad = self.n_eval 
-        else:
-            assert bvec_use_grad.size == self.n_grad, \
-                f'Length of bvec_use_grad is {bvec_use_grad.size} but it should be n_eval = {self.n_eval}'
-            self.n_grad = np.sum(bvec_use_grad)
+        self.bvec_use_grad = bvec_use_grad
         
         ''' Check if the data is noisy and if its variance is known '''
         

@@ -31,9 +31,7 @@ class GpHparaGrad:
         assert hp_optz_info.has_var_fval  is False, 'If has_var_fval is True, use, calc_Kcov_grad_hp()'
         assert hp_optz_info.has_var_fgrad is False, 'If has_var_fgrad is True, use, calc_Kcov_grad_hp()'
 
-        n_eval      = Rtensor.shape[1]
-        n_data      = int(n_eval * (self.dim + 1)) if self.use_grad else n_eval
-        KernGrad_hp = np.zeros((hp_optz_info.n_hp, n_data, n_data))
+        KernGrad_hp = np.zeros((hp_optz_info.n_hp, self.n_data, self.n_data))
 
         if hp_optz_info.has_theta:
             KernGrad_hp[hp_optz_info.idx_theta,:,:] \
@@ -42,12 +40,14 @@ class GpHparaGrad:
             if self.wellcond_mtd == 'precon':
                 eta = self._etaK
                 
-                pvec, pvec_inv, grad_precon = self.calc_Kern_precon(hp_vals.theta, n_eval, calc_grad = True, b_return_vec = True)
-                gamma_vec  = pvec[n_eval:]
-                grad_pvec2 = (2 * eta) * gamma_vec[:,None] * grad_precon[n_eval:,:]
+                pvec, pvec_inv, grad_precon \
+                    = self.calc_Kern_precon(self.n_eval, self.n_grad, hp_vals.theta, 
+                                            calc_grad = True, b_return_vec = True)
+                gamma_vec  = pvec[self.n_eval:]
+                grad_pvec2 = (2 * eta) * gamma_vec[:,None] * grad_precon[self.n_eval:,:]
                 
                 for i in range(self.dim):
-                    KernGrad_hp[hp_optz_info.idx_theta[i], n_eval:,n_eval:] += np.diag(grad_pvec2[:,i])
+                    KernGrad_hp[hp_optz_info.idx_theta[i], self.n_eval:, self.n_eval:] += np.diag(grad_pvec2[:,i])
                 
         if hp_optz_info.has_kernel:
             KernGrad_hp[hp_optz_info.idx_kernel,:,:] \

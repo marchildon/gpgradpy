@@ -11,7 +11,7 @@ import numpy as np
 class KernelCommon:
     
     @staticmethod
-    def calc_grad_precon_matrix(n_eval, gamma_grad_theta, b_return_vec):
+    def calc_grad_precon_matrix(n_eval, n_grad, gamma_grad_theta, b_return_vec):
         '''
         Parameters
         ----------
@@ -25,14 +25,14 @@ class KernelCommon:
         '''
         
         dim    = gamma_grad_theta.size
-        n_data = n_eval * (dim + 1)
+        n_data = n_eval + n_grad * dim
         
         if b_return_vec:
             pvec_grad_theta = np.zeros((n_data, dim))
             
             for i in range(dim):
-                a = (i+1) * n_eval
-                b = a + n_eval
+                a = n_eval + i * n_grad
+                b = a + n_grad
                 pvec_grad_theta[a:b ,i] = gamma_grad_theta[i]
             
             return pvec_grad_theta
@@ -40,8 +40,8 @@ class KernelCommon:
             P_grad_theta = np.zeros((dim, n_data, n_data))
             
             for i in range(dim):
-                a = (i+1) * n_eval
-                b = a + n_eval
+                a = n_eval + i * n_grad
+                b = a + n_grad
                 vec                 = np.zeros(n_data)
                 vec[a:b]            = gamma_grad_theta[i]
                 P_grad_theta[i,:,:] = np.diag(vec)

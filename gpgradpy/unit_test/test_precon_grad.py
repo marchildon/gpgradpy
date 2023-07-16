@@ -39,7 +39,8 @@ print_results   = False
 def check_precon_grad(kernel_type, b_return_vec):
 
     GP = GaussianProcess(dim, use_grad, kernel_type, wellcond_method)
-    pvec, pvec_inv, grad_precon = GP.calc_Kern_precon(theta, n_eval, calc_grad = True, b_return_vec = b_return_vec)
+    pvec, pvec_inv, grad_precon = GP.calc_Kern_precon(n_eval, n_eval, theta, 
+                                                      calc_grad = True, b_return_vec = b_return_vec)
     
     if b_return_vec:
         fd_grad = np.zeros((n_data, dim))
@@ -51,7 +52,7 @@ def check_precon_grad(kernel_type, b_return_vec):
         theta_w_eps = theta * 1.0 
         theta_w_eps[i] += eps 
         
-        pvec_w_eps = GP.calc_Kern_precon(theta_w_eps, n_eval, calc_grad = False, b_return_vec = b_return_vec)[0]
+        pvec_w_eps = GP.calc_Kern_precon(n_eval, n_eval, theta_w_eps, calc_grad = False, b_return_vec = b_return_vec)[0]
         
         if b_return_vec:
             fd_grad[:,i]   = (pvec_w_eps - pvec) / eps

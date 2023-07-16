@@ -126,7 +126,8 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             self.calc_Kern_grad_alpha   = self.calc_KernBase_grad_alpha
 
     def calc_Kern_w_chofac(self, Rtensor, hp_vals, 
-                           calc_chofac = True, calc_cond = False, noise_vec = None):
+                           bvec_use_grad = None, noise_vec = None,
+                           calc_chofac   = True, calc_cond = False):
         ''' 
         See input info for calc_all_K_w_chofac()
         '''
@@ -135,31 +136,34 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         
         # Set varK to 1 such that the Kcov and Kern are the same with the addtion of the nugget
         Kern, Kcor, Kern_w_eta, Kern_chofac, cond_K \
-            = self.calc_all_K_w_chofac(Rtensor, hp_vals, calc_chofac, 
-                                       calc_cond, noise_vec, varK = 1)
+            = self.calc_all_K_w_chofac(Rtensor, hp_vals, bvec_use_grad, noise_vec,
+                                       calc_chofac, calc_cond, varK = 1)
             
         return Kern, Kcor, Kern_w_eta, Kern_chofac, cond_K
 
-    def calc_all_K_w_chofac(self, Rtensor, hp_vals,
-                            calc_chofac     = True,  calc_cond = False,
-                            noise_vec       = None,  varK      = None, 
-                            b_normlz_w_varK = False):
+    def calc_all_K_w_chofac(self, Rtensor, hp_vals,  
+                            bvec_use_grad = None, noise_vec       = None,
+                            calc_chofac   = True, calc_cond       = False,
+                            varK          = None, b_normlz_w_varK = False):
         '''
         Parameters
         ----------
-        Rtensor : 3D numpy tensos
+        Rtensor : 3D numpy tensor
             Relative distance between all data points in each coordinate 
             direction. Calculated with calc_Rtensor() from CommonFun
         hp_vals : HparaOptzVal from GpHpara
             Class that contains all of the hyperparameters
+        bvec_use_grad : 1D numpy array of bool of length n_eval, optional
+            Indicates which gradients to use to construct the kernel matrix. 
+            The default is None.
+        noise_vec : 1D numpy array, optional
+            Noise for each of the function evalution values and gradients 
+            (if needed). The default is None.
         calc_chofac : bool, optional
             Set to True to calculate the Cholesky decompositon of the 
             regularized kernel matrix. The default is True.
         calc_cond : bool, optional
             Set to true to calculate the condition number of the . The default is False.
-        noise_vec : 1D numpy array, optional
-            Noise for each of the function evalution values and gradients 
-            (if needed). The default is None.
         varK : float, optional
             Value for the hyperparameter varK. The default is None.
         b_normlz_w_varK : bool, optional
@@ -186,8 +190,8 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         theta     = hp_vals.theta 
         hp_kernel = hp_vals.kernel
         
-        dim, n_eval, n2 = Rtensor.shape
-        assert n_eval == n2, 'Incompatible shapes' 
+        dim, n1, n2 = Rtensor.shape
+        assert n1 == n2, 'Incompatible shapes' 
         
         if varK is None:
             assert hp_vals.varK  is not None, f'varK is not provided and hp_vals.varK is None, hp_vals = {hp_vals}'
@@ -195,13 +199,11 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             
         assert np.sum(np.isnan(theta)) == 0, f'There are nan values theta = {theta}'
         
-        ndata = n_eval * (self.dim + 1) if self.use_grad else n_eval
-        
         if noise_vec is None:
             nugget    = self._etaK
-            noise_vec = self.make_vec_var_noise(n_eval, hp_vals, nugget, varK)
+            noise_vec = self.make_vec_var_noise(hp_vals, nugget, varK, bvec_use_grad)
         else:
-            assert noise_vec.size == ndata, f'Size of noise_vec is {noise_vec.size} but it should be {ndata}'
+            assert noise_vec.size == self.n_data, f'Size of noise_vec is {noise_vec.size} but it should be {self.n_data}'
             assert np.min(noise_vec) >= (0.99 * self._etaK), \
                 f'min(noise_vec) = {np.min(noise_vec):.2e}, which is smaller than etaK = {self._etaK:.2e}'
         
@@ -209,8 +211,8 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             
             assert self.use_grad is True, 'self.wellcond_mtd should be None if use_grad is False'
             
-            P1, P1inv   = self.calc_Kern_precon(theta, n_eval)[:2]
-            Kern        = self.calc_Kern(Rtensor, theta, hp_kernel)
+            P1, P1inv   = self.calc_Kern_precon(self.n_eval, self.n_grad, theta)[:2]
+            Kern        = self.calc_Kern(Rtensor, theta, hp_kernel, bvec_use_grad, bvec_use_grad)
             Kern_w_eta  = Kern + np.diag(noise_vec / varK)
             
             if b_normlz_w_varK is False:
@@ -264,7 +266,7 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
                 
         else:
             Kcor = None
-            Kern = self.calc_Kern(Rtensor, theta, hp_kernel)
+            Kern = self.calc_Kern(Rtensor, theta, hp_kernel, bvec_use_grad, bvec_use_grad)
             
             if b_normlz_w_varK:
                 Kcov = Kern + np.diag(noise_vec / varK)
@@ -301,12 +303,10 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         
         return Kern, Kcor, Kcov, Kcov_chofac, condK
 
-    def make_vec_var_noise(self, n_eval, hp_vals, nugget, varK):
+    def make_vec_var_noise(self, hp_vals, nugget, varK, bvec_use_grad):
         '''
         Parameters
         ----------
-        n_eval : int
-            Number of function evaluations.
         hp_vals : HparaOptzVal from GpHpara
             Class that contains all of the hyperparameters
         nugget : float
@@ -328,38 +328,40 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         theta = hp_vals.theta 
         std_fval, _, std_fgrad = self.get_scl_eval_data(theta)[1:]
         
-        n_data    = n_eval * (self.dim + 1) if self.use_grad else n_eval
-        var_noise = np.zeros(n_data)
-        
-        ''' Make noise vector '''
-        
-        if self.known_eps_fval:
-            assert hp_vals.var_fval is None
-            assert not np.any(np.isnan(std_fval)), f'There are nan values: std_fval = {std_fval}'
-            var_noise[:n_eval] = std_fval**2
+        if self.use_grad == False:
+            var_noise = np.maximum(std_fval, nugget * varK)
         else:
-            var_noise[:n_eval] = hp_vals.var_fval
-        
-        if self.known_eps_fgrad:
-            assert hp_vals.var_fgrad is None
-            assert not np.any(np.isnan(std_fgrad)), f'There are nan values: std_fgrad = {std_fgrad}'
-            var_noise[n_eval:] = (std_fgrad**2).reshape(std_fgrad.size, order='f')
-        else:
-            var_noise[n_eval:] = hp_vals.var_fgrad
-
-        ''' Make nugget vector '''
-        
-        if self.wellcond_mtd == 'precon':
-            pvec       = self.calc_Kern_precon(theta, n_eval, b_return_vec = True)[0]
-            nugget_vec = pvec**2 * nugget * varK
-        else:
-            nugget_vec = np.full(n_data, nugget * varK)
-        
-        # Scale and set minimum noise with the nugget
-        var_noise = np.maximum(var_noise, nugget_vec)
-        
-        if np.any(np.isnan(var_noise)):
-            print(f'There are nan in var_noise. varK = {varK:.1e}, theta = {theta}')
-            print(f'var_noise = \n{var_noise}')
+            var_noise = np.zeros(self.n_data)
+            
+            ''' Make noise vector '''
+            
+            if self.known_eps_fval:
+                assert hp_vals.var_fval is None
+                assert not np.any(np.isnan(std_fval)), f'There are nan values: std_fval = {std_fval}'
+                var_noise[:self.n_eval] = std_fval**2
+            else:
+                var_noise[:self.n_eval] = hp_vals.var_fval
+            
+            if self.known_eps_fgrad:
+                assert hp_vals.var_fgrad is None
+                assert not np.any(np.isnan(std_fgrad)), f'There are nan values: std_fgrad = {std_fgrad}'
+                var_noise[self.n_eval:] = (std_fgrad**2).reshape(std_fgrad.size, order='f')
+            else:
+                var_noise[self.n_eval:] = hp_vals.var_fgrad
+    
+            ''' Make nugget vector '''
+            
+            if self.wellcond_mtd == 'precon':
+                pvec       = self.calc_Kern_precon(self.n_eval, self.n_eval, theta, b_return_vec = True)[0]
+                nugget_vec = pvec**2 * nugget * varK
+            else:
+                nugget_vec = np.full(self.n_data, nugget * varK)
+            
+            # Scale and set minimum noise with the nugget
+            var_noise = np.maximum(var_noise, nugget_vec)
+            
+            if np.any(np.isnan(var_noise)):
+                print(f'There are nan in var_noise. varK = {varK:.1e}, theta = {theta}')
+                print(f'var_noise = \n{var_noise}')
         
         return var_noise

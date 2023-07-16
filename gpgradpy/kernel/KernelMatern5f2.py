@@ -360,16 +360,16 @@ class KernelMatern5f2(KernelMatern5f2Base, KernelMatern5f2Grad):
         return (3.0/5.0) * gamma**2
 
     @staticmethod
-    def matern_5f2_Kern_precon(theta, n1, calc_grad = False, b_return_vec = False):
+    def matern_5f2_Kern_precon(n_eval, n_grad, theta, calc_grad = False, b_return_vec = False):
         # Calculate the precondition matrix
         
         gamma    = KernelMatern5f2.matern_5f2_theta2gamma(theta)
-        pvec     = np.hstack((np.ones(n1), np.kron(gamma, np.ones(n1))))
+        pvec     = np.hstack((np.ones(n_eval), np.kron(gamma, np.ones(n_grad))))
         pvec_inv = 1 / pvec
         
         gamma_grad_theta = 5.0 / (6.0 * gamma)
         
-        grad_precon = KernelCommon.calc_grad_precon_matrix(n1, gamma_grad_theta, b_return_vec)
+        grad_precon = KernelCommon.calc_grad_precon_matrix(n_eval, n_grad, gamma_grad_theta, b_return_vec)
         
         if b_return_vec:
             return pvec, pvec_inv, grad_precon
