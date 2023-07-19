@@ -126,7 +126,7 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             self.calc_Kern_grad_alpha   = self.calc_KernBase_grad_alpha
 
     def calc_Kern_w_chofac(self, Rtensor, hp_vals, 
-                           bvec_use_grad = None, noise_vec = None,
+                           noise_vec = None,
                            calc_chofac   = True, calc_cond = False):
         ''' 
         See input info for calc_all_K_w_chofac()
@@ -136,15 +136,15 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         
         # Set varK to 1 such that the Kcov and Kern are the same with the addtion of the nugget
         Kern, Kcor, Kern_w_eta, Kern_chofac, cond_K \
-            = self.calc_all_K_w_chofac(Rtensor, hp_vals, bvec_use_grad, noise_vec,
+            = self.calc_all_K_w_chofac(Rtensor, hp_vals, noise_vec,
                                        calc_chofac, calc_cond, varK = 1)
             
         return Kern, Kcor, Kern_w_eta, Kern_chofac, cond_K
 
     def calc_all_K_w_chofac(self, Rtensor, hp_vals,  
-                            bvec_use_grad = None, noise_vec       = None,
-                            calc_chofac   = True, calc_cond       = False,
-                            varK          = None, b_normlz_w_varK = False):
+                            noise_vec   = None,
+                            calc_chofac = True, calc_cond       = False,
+                            varK        = None, b_normlz_w_varK = False):
         '''
         Parameters
         ----------
@@ -201,7 +201,7 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         
         if noise_vec is None:
             nugget    = self._etaK
-            noise_vec = self.make_vec_var_noise(hp_vals, nugget, varK, bvec_use_grad)
+            noise_vec = self.make_vec_var_noise(hp_vals, nugget, varK)
         else:
             assert noise_vec.size == self.n_data, f'Size of noise_vec is {noise_vec.size} but it should be {self.n_data}'
             assert np.min(noise_vec) >= (0.99 * self._etaK), \
@@ -212,7 +212,7 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             assert self.use_grad is True, 'self.wellcond_mtd should be None if use_grad is False'
             
             P1, P1inv   = self.calc_Kern_precon(self.n_eval, self.n_grad, theta)[:2]
-            Kern        = self.calc_Kern(Rtensor, theta, hp_kernel, bvec_use_grad, bvec_use_grad)
+            Kern        = self.calc_Kern(Rtensor, theta, hp_kernel, self.bvec_use_grad, self.bvec_use_grad)
             Kern_w_eta  = Kern + np.diag(noise_vec / varK)
             
             if b_normlz_w_varK is False:
@@ -266,7 +266,7 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
                 
         else:
             Kcor = None
-            Kern = self.calc_Kern(Rtensor, theta, hp_kernel, bvec_use_grad, bvec_use_grad)
+            Kern = self.calc_Kern(Rtensor, theta, hp_kernel, self.bvec_use_grad, self.bvec_use_grad)
             
             if b_normlz_w_varK:
                 Kcov = Kern + np.diag(noise_vec / varK)
@@ -303,7 +303,7 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         
         return Kern, Kcor, Kcov, Kcov_chofac, condK
 
-    def make_vec_var_noise(self, hp_vals, nugget, varK, bvec_use_grad):
+    def make_vec_var_noise(self, hp_vals, nugget, varK):
         '''
         Parameters
         ----------
@@ -352,7 +352,7 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             ''' Make nugget vector '''
             
             if self.wellcond_mtd == 'precon':
-                pvec       = self.calc_Kern_precon(self.n_eval, self.n_eval, theta, b_return_vec = True)[0]
+                pvec       = self.calc_Kern_precon(self.n_eval, self.n_grad, theta, b_return_vec = True)[0]
                 nugget_vec = pvec**2 * nugget * varK
             else:
                 nugget_vec = np.full(self.n_data, nugget * varK)

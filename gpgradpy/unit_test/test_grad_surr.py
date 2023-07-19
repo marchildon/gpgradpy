@@ -22,12 +22,6 @@ xmax = 2
 kernel_type_vec  = ['SqExp', 'RatQu', 'Ma5f2']
 wellcond_mtd_vec = [None, 'req_vmin', 'precon']
 
-# wellcond_mtd = 'req_vmin'
-# wellcond_mtd = 'dflt_vmin'
-
-kernel_type_vec  = ['SqExp']
-wellcond_mtd_vec = [None]
-
 method2set_hp = 'set'
 
 calc_hess = True

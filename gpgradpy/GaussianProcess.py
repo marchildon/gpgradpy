@@ -226,8 +226,6 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
                     f'Length of bvec_use_grad is {bvec_use_grad.size} but it should be n_eval = {n_eval}'
                 assert grad.shape[0] == n_grad, \
                     f'No. of rows of grad is {grad.shape[0]} but it should be n_grad = {n_grad}'
-                assert std_grad.shape[0] == n_grad, \
-                    f'No. of rows of std_grad is {std_grad.shape[0]} but it should be n_grad = {n_grad}'
         else:
             assert bvec_use_grad is None, 'bvec_use_grad must be None if grads are not used for the GP'
             n_grad = 0
@@ -269,11 +267,11 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         
         ''' Store input data '''
         
-        self._x_eval_in     = x_eval
-        self._fval_in       = fval
-        self._std_fval_in   = std_fval if self.known_eps_fval  else None
-        self._grad_in       = grad 
-        self._std_grad_in   = std_grad if self.known_eps_fgrad else None
+        self._x_eval_in    = x_eval
+        self._fval_in      = fval
+        self._std_fval_in  = std_fval if self.known_eps_fval  else None
+        self._grad_in      = grad 
+        self._std_grad_in  = std_grad if self.known_eps_fgrad else None
         
         self.bvec_use_grad = bvec_use_grad
         

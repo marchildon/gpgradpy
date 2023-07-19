@@ -35,7 +35,7 @@ class GpHparaGrad:
 
         if hp_optz_info.has_theta:
             KernGrad_hp[hp_optz_info.idx_theta,:,:] \
-                = self.calc_Kern_grad_theta(Rtensor, hp_vals.theta, hp_vals.kernel)
+                = self.calc_Kern_grad_theta(Rtensor, hp_vals.theta, hp_vals.kernel, self.bvec_use_grad)
                 
             if self.wellcond_mtd == 'precon':
                 eta = self._etaK
@@ -51,7 +51,7 @@ class GpHparaGrad:
                 
         if hp_optz_info.has_kernel:
             KernGrad_hp[hp_optz_info.idx_kernel,:,:] \
-                = self.calc_Kern_grad_alpha(Rtensor, hp_vals.theta, hp_vals.kernel)
+                = self.calc_Kern_grad_alpha(Rtensor, hp_vals.theta, hp_vals.kernel, self.bvec_use_grad)
 
         return KernGrad_hp
 
@@ -74,10 +74,7 @@ class GpHparaGrad:
         
         assert hp_vals.varK is not None, 'The method calc_Kcov_grad_hp() only needs to be called if varK is a hyperparameter'
         
-        n_eval = Rtensor.shape[1]
-        n_data = int(n_eval * (self.dim + 1)) if self.use_grad else n_eval
-        
-        Kcov_grad_hp = np.zeros((hp_optz_info.n_hp, n_data, n_data))
+        Kcov_grad_hp = np.zeros((hp_optz_info.n_hp, self.n_data, self.n_data))
 
         if hp_optz_info.has_theta:
             Kcov_grad_hp[hp_optz_info.idx_theta,:,:] \
@@ -92,46 +89,47 @@ class GpHparaGrad:
 
         if hp_optz_info.has_var_fval:
             Kcov_grad_hp[hp_optz_info.idx_var_fval,:,:] \
-                = self.calc_Kcov_grad_var_fval(n_data, hp_vals)
+                = self.calc_Kcov_grad_var_fval(hp_vals)
 
         if hp_optz_info.has_var_fgrad:
             Kcov_grad_hp[hp_optz_info.idx_var_fgrad,:,:] \
-                = self.calc_Kcov_grad_var_fgrad(n_data, hp_vals)
+                = self.calc_Kcov_grad_var_fgrad(hp_vals)
 
         return Kcov_grad_hp
 
     def calc_Kcov_grad_theta(self, hp_vals, Rtensor):
         
         varK         = self.hp_varK if hp_vals.varK is None else hp_vals.varK
-        Kcov_grad_th = varK * self.calc_Kern_grad_theta(Rtensor, hp_vals.theta, hp_vals.kernel) 
+        Kcov_grad_th = varK * self.calc_Kern_grad_theta(Rtensor, hp_vals.theta, hp_vals.kernel, self.bvec_use_grad) 
         
         if self.wellcond_mtd == 'precon':
-            n_eval = Rtensor.shape[1]
-            eta    = self._etaK
+            eta = self._etaK
             
-            pvec, pvec_inv, grad_precon = self.calc_Kern_precon(hp_vals.theta, n_eval, calc_grad = True, b_return_vec = True)
-            gamma_vec  = pvec[n_eval:]
-            gamma_grad = grad_precon[n_eval:,:]
+            pvec, pvec_inv, grad_precon \
+                = self.calc_Kern_precon(self.n_eval, self.n_grad, hp_vals.theta, 
+                                        calc_grad = True, b_return_vec = True)
+            gamma_vec  = pvec[self.n_eval:]
+            gamma_grad = grad_precon[self.n_eval:,:]
             
             if self.use_grad and self.known_eps_fgrad:
                 std_fgrad     = self.get_init_eval_data()[-1]
                 vec_var_fgrad = std_fgrad.reshape(std_fgrad.size, order='f')**2
             else:
-                vec_var_fgrad = np.full(n_eval * self.dim, hp_vals.var_fgrad)
+                vec_var_fgrad = np.full(self.n_grad * self.dim, hp_vals.var_fgrad)
                 
-            bvec = vec_var_fgrad > (pvec[n_eval:]**2 * varK * eta)
+            bvec = vec_var_fgrad > (pvec[self.n_eval:]**2 * varK * eta)
             
             for i in range(self.dim):
                 P_2dPdth       = (2 * eta * varK) * gamma_vec * gamma_grad[:,i]
                 P_2dPdth[bvec] = 0
                 
-                Kcov_grad_th[i, n_eval:,n_eval:] += np.diag(P_2dPdth)
+                Kcov_grad_th[i, self.n_eval:,self.n_eval:] += np.diag(P_2dPdth)
             
         return Kcov_grad_th
 
     def calc_Kcov_grad_alpha(self, hp_vals, Rtensor):
         
-        dKda = self.calc_Kern_grad_alpha(Rtensor, hp_vals.theta, hp_vals.kernel)
+        dKda = self.calc_Kern_grad_alpha(Rtensor, hp_vals.theta, hp_vals.kernel, self.bvec_use_grad)
         
         return dKda * hp_vals.varK
 
@@ -141,8 +139,6 @@ class GpHparaGrad:
         
         eta    = self._etaK
         varK   = hp_vals.varK
-        n_data = Kern.shape[0]
-        n_eval = int(n_data / (self.dim + 1)) if self.use_grad else n_data
         theta  = self.hp_theta if hp_vals.theta is None else hp_vals.theta 
         
         if self.known_eps_fval or (self.use_grad and self.known_eps_fgrad):
@@ -151,7 +147,7 @@ class GpHparaGrad:
         if hp_vals.var_fval is None:
             var_fval = std_fval_scl**2
         else:
-            var_fval = hp_vals.var_fval * np.ones(n_eval)   
+            var_fval = hp_vals.var_fval * np.ones(self.n_eval)   
             
         ''' Calculate derivative '''
 
@@ -159,34 +155,34 @@ class GpHparaGrad:
         
         # Add contribution from noise on the function evaluation
         bvec_fval = (varK * eta) > var_fval
-        Kern_der_varK[:n_eval, :n_eval] += np.diag(bvec_fval * eta) 
+        Kern_der_varK[:self.n_eval, :self.n_eval] += np.diag(bvec_fval * eta) 
         
         # Add contribution from noise on the gradient evaluation
         if self.use_grad:
             if self.wellcond_mtd == 'precon':
-                pvec      = self.calc_Kern_precon(theta, n_eval, b_return_vec = True)[0]
-                gamma_vec = pvec[n_eval:]
+                pvec      = self.calc_Kern_precon(self.n_eval, self.n_grad, theta, b_return_vec = True)[0]
+                gamma_vec = pvec[self.n_eval:]
                 
                 if hp_vals.var_fgrad is None:
-                    var_fgrad = np.reshape(std_fgrad_scl**2, n_eval * self.dim, order='f')
+                    var_fgrad = np.reshape(std_fgrad_scl**2, self.n_grad * self.dim, order='f')
                 else:
                     var_fgrad = hp_vals.var_fgrad
                     
                 bvec_fgrad = (varK * eta * gamma_vec**2) > var_fgrad
                 grad_vec   = bvec_fgrad * (eta * gamma_vec**2)
-                Kern_der_varK[n_eval:, n_eval:] += np.diag(grad_vec)
+                Kern_der_varK[self.n_eval:, self.n_eval:] += np.diag(grad_vec)
                     
             else:
                 if hp_vals.var_fgrad is None:
-                    b_vec = (varK * eta) > np.reshape(std_fgrad_scl**2, n_eval * self.dim, order='f')
-                    Kern_der_varK[n_eval:, n_eval:] += np.diag(b_vec * eta)
+                    b_vec = (varK * eta) > np.reshape(std_fgrad_scl**2, self.n_grad * self.dim, order='f')
+                    Kern_der_varK[self.n_eval:, self.n_eval:] += np.diag(b_vec * eta)
                 else:
                     if (varK * eta) > hp_vals.var_fgrad:
-                        Kern_der_varK[n_eval:, n_eval:] += np.diag(np.full(self.dim * n_eval, eta)) # eta * np.eye(self.dim * n_eval)
+                        Kern_der_varK[self.n_eval:, self.n_eval:] += np.diag(np.full(self.n_grad * self.dim, eta))
             
         return Kern_der_varK
 
-    def calc_Kcov_grad_var_fval(self, n_data, hp_vals):
+    def calc_Kcov_grad_var_fval(self, hp_vals):
         
         assert hp_vals.varK     is not None, 'The parameter varK cannot be varK'
         assert hp_vals.var_fval is not None, 'The parameter var_fgrad cannot be var_fval'
@@ -196,37 +192,36 @@ class GpHparaGrad:
         
         if b_check:
             if self.use_grad:
-                n_eval = int(n_data / (self.dim + 1)) 
-                kernel_der_var_fval                   = np.zeros((n_data, n_data))
-                kernel_der_var_fval[:n_eval, :n_eval] = np.eye(n_eval)
+                # n_eval = int(n_data / (self.dim + 1)) 
+                kernel_der_var_fval                   = np.zeros((self.n_data, self.n_data))
+                kernel_der_var_fval[:self.n_eval, :self.n_eval] = np.eye(self.n_eval)
             else:
-                kernel_der_var_fval = np.eye(n_data)
+                kernel_der_var_fval = np.eye(self.n_data)
         else:
-            return np.zeros((n_data, n_data))
+            return np.zeros((self.n_data, self.n_data))
 
         return kernel_der_var_fval
 
-    def calc_Kcov_grad_var_fgrad(self, n_data, hp_vals):
+    def calc_Kcov_grad_var_fgrad(self, hp_vals):
         
         assert hp_vals.varK      is not None, 'The parameter varK cannot be varK'
         assert hp_vals.var_fgrad is not None, 'The parameter var_fgrad cannot be var_fgrad'
         assert self.use_grad, 'Method should only be called if gradient information is provided'
         
-        eta    = self._etaK
-        n_eval = int(n_data // (self.dim + 1)) 
+        eta = self._etaK
         
         if self.wellcond_mtd == 'precon':
-            pvec      = self.calc_Kern_precon(hp_vals.theta, n_eval, b_return_vec = True)[0]
-            gamma_vec = pvec[n_eval:]
+            pvec      = self.calc_Kern_precon(self.n_eval, self.n_grad, hp_vals.theta, b_return_vec = True)[0]
+            gamma_vec = pvec[self.n_eval:]
             bvec      = hp_vals.var_fgrad > (gamma_vec**2 * hp_vals.varK * eta)
-            Kcov_grad_var_fgrad = np.diag(np.hstack((np.zeros(n_eval), bvec)))
+            Kcov_grad_var_fgrad = np.diag(np.hstack((np.zeros(self.n_eval), bvec)))
         else:
             b_check = hp_vals.var_fgrad > (hp_vals.varK * eta)
             
             if b_check:
-                Kcov_grad_var_fgrad = np.diag(np.hstack((np.zeros(n_eval), np.ones(n_eval * self.dim))))
+                Kcov_grad_var_fgrad = np.diag(np.hstack((np.zeros(self.n_eval), np.ones(self.n_grad * self.dim))))
             else:
-                Kcov_grad_var_fgrad = np.zeros((n_data, n_data))
+                Kcov_grad_var_fgrad = np.zeros((self.n_data, self.n_data))
 
         return Kcov_grad_var_fgrad
     

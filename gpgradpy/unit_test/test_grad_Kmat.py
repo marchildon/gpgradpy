@@ -16,21 +16,24 @@ from gpgradpy import GaussianProcess
 
 ''' Parameters to vary '''
 
- # req_vmin is not setup for cases with noise on the objective or gradient 
-
 kernel_type_vec     = ['SqExp', 'Ma5f2', 'RatQu']
-list_wellcond_mtd   = [None, 'req_vmin', 'precon']
+
+list_wellcond_mtd_wo_noise = [None, 'precon'] # [None, 'precon', 'req_vmin',]
+list_wellcond_mtd_w_noise  = [None, 'precon'] # req_vmin is not setup for noisy problems
 
 ''' Set parameters '''
 
 eps  = 1e-6
 
-use_grad        = True
+eta_dflt     = 1e-2
+use_grad     = True
 wellcond_mtd = 'precon' 
 
-x_eval   = 1e-3 * np.array([[0, 0], [1, 0.5]])
+x_eval   = 1e-3 * np.array([[0, 0], [1, 0.5], [0.5, 1.0]])
+n_eval, dim = x_eval.shape
 
-eta_dflt = 1e-2
+bvec_use_grad     = np.ones(n_eval, dtype=bool)
+bvec_use_grad[-1] = False
 
 # Testing tolerances
 rtol    = 1e-5
@@ -38,13 +41,13 @@ atol    = 1e-7
 
 ''' Setup GP '''
 
-n_eval, dim = x_eval.shape
 n_data      = n_eval * (dim + 1) if use_grad else n_eval
 dist_all    = CommonFun.calc_Rtensor(x_eval, x_eval, 1)
 
 # Data 
-obj  = np.zeros(n_eval) 
-grad = np.zeros(x_eval.shape)
+obj      = np.zeros(n_eval) 
+grad_all = np.zeros(x_eval.shape)
+grad     = grad_all[bvec_use_grad,:]
 
 # Default inconsequential required parameters 
 i_optz = 1
@@ -97,12 +100,12 @@ def setup_GP_w_zero_err(wellcond_mtd, kernel_type):
     GP.init_optz_surr(2)
     
     std_fval_zero  = np.zeros(n_eval)
-    std_fgrad_zero = np.zeros(x_eval.shape)
+    std_fgrad_zero = np.zeros(grad.shape)
     
     GP.set_custom_hp(beta_dflt, theta, hp_kernel, varK_dflt, None, None)
     
     if use_grad:
-        GP.set_data(x_eval, obj, std_fval_zero, grad, std_fgrad_zero)
+        GP.set_data(x_eval, obj, std_fval_zero, grad, std_fgrad_zero, bvec_use_grad)
     else:
         GP.set_data(x_eval, obj, std_fval_zero)
 
@@ -126,11 +129,11 @@ def setup_GP_w_small_known_err(wellcond_mtd, kernel_type):
     cutoff_std_fgrad = np.sqrt(np.min(cutoff_var_fgrad))
     
     std_fval_zero  = np.ones(n_eval) * (cutoff_std_fval / 5)
-    std_fgrad_zero = np.ones(x_eval.shape) * (cutoff_std_fgrad / 5)
+    std_fgrad_zero = np.ones(grad.shape) * (cutoff_std_fgrad / 5)
     
     GP.set_custom_hp(beta_dflt, theta, hp_kernel, varK_dflt, None, None)
     
-    GP.set_data(x_eval, obj, std_fval_zero, grad, std_fgrad_zero)
+    GP.set_data(x_eval, obj, std_fval_zero, grad, std_fgrad_zero, bvec_use_grad)
     GP.set_hpara(method2set_hp, i_optz)
     GP._etaK = eta_dflt
     
@@ -155,9 +158,9 @@ def setup_GP_w_big_known_err(wellcond_mtd, kernel_type):
     cutoff_std_fgrad = np.sqrt(np.max(cutoff_var_fgrad))
     
     std_fval_zero  = np.ones(n_eval) * (cutoff_std_fval * 100)
-    std_fgrad_zero = np.ones(x_eval.shape) * (cutoff_std_fgrad * 100)
+    std_fgrad_zero = np.ones(grad.shape) * (cutoff_std_fgrad * 100)
     
-    GP.set_data(x_eval, obj, std_fval_zero, grad, std_fgrad_zero)
+    GP.set_data(x_eval, obj, std_fval_zero, grad, std_fgrad_zero, bvec_use_grad)
     GP.set_custom_hp(beta_dflt, theta, hp_kernel, varK_dflt, None, None)
 
     hp_vals = make_hp_vals(wellcond_mtd, kernel_type, varK_dflt, None, None)
@@ -181,7 +184,7 @@ def setup_GP_w_small_unknown_err(wellcond_mtd, kernel_type):
     std_fval_zero   = None
     std_fgrad_zero  = None
     
-    GP.set_data(x_eval, obj, std_fval_zero, grad, std_fgrad_zero)
+    GP.set_data(x_eval, obj, std_fval_zero, grad, std_fgrad_zero, bvec_use_grad)
     GP.set_custom_hp(beta_dflt, theta, hp_kernel, varK_dflt, hp_var_fval, hp_var_fgrad)
     
     GP._etaK = eta_dflt
@@ -205,7 +208,7 @@ def setup_GP_w_big_unknown_err(wellcond_mtd, kernel_type):
     std_fval_zero   = None
     std_fgrad_zero  = None
     
-    GP.set_data(x_eval, obj, std_fval_zero, grad, std_fgrad_zero)
+    GP.set_data(x_eval, obj, std_fval_zero, grad, std_fgrad_zero, bvec_use_grad)
     GP.set_custom_hp(beta_dflt, theta, hp_kernel, varK_dflt, hp_var_fval, hp_var_fgrad)
     
     GP._etaK = eta_dflt
@@ -220,7 +223,7 @@ def setup_GP_w_big_unknown_err(wellcond_mtd, kernel_type):
 def calc_grad_theta(GP, hp_vals):
     
     Kern, _, Kcov       = GP.calc_all_K_w_chofac(dist_all, hp_vals, calc_chofac = False)[:3]
-    KernGrad_theta      = GP.calc_Kern_grad_theta(dist_all, hp_vals.theta, hp_vals.kernel)
+    KernGrad_theta      = GP.calc_Kern_grad_theta(dist_all, hp_vals.theta, hp_vals.kernel, bvec_use_grad)
     Kcov_grad_theta     = GP.calc_Kcov_grad_theta(hp_vals, dist_all)
 
     hp_vals.theta[0] += eps
@@ -235,7 +238,7 @@ def calc_grad_theta(GP, hp_vals):
 def calc_grad_alpha(GP, hp_vals):
     
     Kern, _, Kcov       = GP.calc_all_K_w_chofac(dist_all, hp_vals, calc_chofac = False)[:3]
-    KernGrad_alpha      = GP.calc_Kern_grad_alpha(dist_all, hp_vals.theta, hp_vals.kernel)
+    KernGrad_alpha      = GP.calc_Kern_grad_alpha(dist_all, hp_vals.theta, hp_vals.kernel, bvec_use_grad)
     Kcov_grad_alpha     = GP.calc_Kcov_grad_alpha(hp_vals, dist_all)
 
     hp_vals.kernel += eps
@@ -262,7 +265,7 @@ def calc_grad_varK(GP, hp_vals):
 def calc_grad_var_fval(GP, hp_vals):
     
     Kcov = GP.calc_all_K_w_chofac(dist_all, hp_vals, calc_chofac = False)[2]
-    Kcov_grad_var_fval  = GP.calc_Kcov_grad_var_fval(n_data, hp_vals)
+    Kcov_grad_var_fval  = GP.calc_Kcov_grad_var_fval(hp_vals)
 
     hp_vals.var_fval += eps
     Kcov_w_eps = GP.calc_all_K_w_chofac(dist_all, hp_vals, calc_chofac = False)[2]
@@ -274,7 +277,7 @@ def calc_grad_var_fval(GP, hp_vals):
 def calc_grad_var_fgrad(GP, hp_vals):
     
     Kcov         = GP.calc_all_K_w_chofac(dist_all, hp_vals, calc_chofac = False)[2]
-    Kcov_grad_var_fgrad = GP.calc_Kcov_grad_var_fgrad(n_data, hp_vals)
+    Kcov_grad_var_fgrad = GP.calc_Kcov_grad_var_fgrad(hp_vals)
 
     hp_vals.var_fgrad += eps
     Kcov_w_eps = GP.calc_all_K_w_chofac(dist_all, hp_vals, calc_chofac = False)[2]
@@ -285,22 +288,13 @@ def calc_grad_var_fgrad(GP, hp_vals):
   
 ''' Run tests '''
 
-# for wellcond_mtd in list_wellcond_mtd:
-#     for kernel_type in kernel_type_vec:
-    
-#         GP, hp_vals = setup_GP_w_zero_err(wellcond_mtd, kernel_type)
-#         KernGrad_theta, Kcov_grad_theta, Kern_fd, Kcov_fd = calc_grad_theta(GP, hp_vals)
-
-#         np.testing.assert_allclose(Kern_fd, KernGrad_theta[0,:,:],  rtol = rtol, atol = atol)
-#         np.testing.assert_allclose(Kcov_fd, Kcov_grad_theta[0,:,:], rtol = rtol, atol = atol)
-
 class TestGradKmat(unittest.TestCase):
     
     ''' Grad theta '''
     
     def test_grad_theta_zero_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_wo_noise:
             for kernel_type in kernel_type_vec:
             
                 GP, hp_vals = setup_GP_w_zero_err(wellcond_mtd, kernel_type)
@@ -311,11 +305,8 @@ class TestGradKmat(unittest.TestCase):
         
     def test_grad_theta_small_known_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
             
                 GP, hp_vals = setup_GP_w_small_known_err(wellcond_mtd, kernel_type)
                 KernGrad_theta, Kcov_grad_theta, Kern_fd, Kcov_fd = calc_grad_theta(GP, hp_vals)
@@ -325,11 +316,8 @@ class TestGradKmat(unittest.TestCase):
         
     def test_grad_theta_big_known_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
         
                 GP, hp_vals = setup_GP_w_big_known_err(wellcond_mtd, kernel_type)
                 KernGrad_theta, Kcov_grad_theta, Kern_fd, Kcov_fd = calc_grad_theta(GP, hp_vals)
@@ -339,11 +327,8 @@ class TestGradKmat(unittest.TestCase):
      
     def test_grad_theta_small_unknown_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
                 
                 GP, hp_vals = setup_GP_w_small_unknown_err(wellcond_mtd, kernel_type)
                 KernGrad_theta, Kcov_grad_theta, Kern_fd, Kcov_fd = calc_grad_theta(GP, hp_vals)
@@ -353,11 +338,8 @@ class TestGradKmat(unittest.TestCase):
         
     def test_grad_theta_big_unknown_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
         
                 GP, hp_vals = setup_GP_w_big_unknown_err(wellcond_mtd, kernel_type)
                 KernGrad_theta, Kcov_grad_theta, Kern_fd, Kcov_fd = calc_grad_theta(GP, hp_vals)
@@ -369,7 +351,7 @@ class TestGradKmat(unittest.TestCase):
     
     def test_grad_alpha_zero_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_wo_noise:
             for kernel_type in kernel_type_vec:
         
                 GP, hp_vals = setup_GP_w_zero_err(wellcond_mtd, kernel_type)
@@ -384,16 +366,13 @@ class TestGradKmat(unittest.TestCase):
         
     def test_grad_alpha_small_known_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
             
                 GP, hp_vals = setup_GP_w_small_known_err(wellcond_mtd, kernel_type)
                 
                 if hp_vals.kernel is None:
                     continue 
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
                 
                 KernGrad_alpha, Kcov_grad_alpha, Kern_fd, Kcov_fd = calc_grad_alpha(GP, hp_vals)
         
@@ -402,15 +381,12 @@ class TestGradKmat(unittest.TestCase):
         
     def test_grad_alpha_big_known_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
         
                 GP, hp_vals = setup_GP_w_big_known_err(wellcond_mtd, kernel_type)
                 
                 if hp_vals.kernel is None:
-                    continue
-                
-                if wellcond_mtd == 'req_vmin':
                     continue
                 
                 KernGrad_alpha, Kcov_grad_alpha, Kern_fd, Kcov_fd = calc_grad_alpha(GP, hp_vals)
@@ -420,15 +396,12 @@ class TestGradKmat(unittest.TestCase):
         
     def test_grad_alpha_small_unknown_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
         
                 GP, hp_vals = setup_GP_w_small_unknown_err(wellcond_mtd, kernel_type)
                 
                 if hp_vals.kernel is None:
-                    continue
-                
-                if wellcond_mtd == 'req_vmin':
                     continue
                 
                 KernGrad_alpha, Kcov_grad_alpha, Kern_fd, Kcov_fd = calc_grad_alpha(GP, hp_vals)
@@ -438,15 +411,12 @@ class TestGradKmat(unittest.TestCase):
         
     def test_grad_alpha_big_unknown_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
         
                 GP, hp_vals = setup_GP_w_big_unknown_err(wellcond_mtd, kernel_type)
                 
                 if hp_vals.kernel is None:
-                    continue
-                
-                if wellcond_mtd == 'req_vmin':
                     continue
                 
                 KernGrad_alpha, Kcov_grad_alpha, Kern_fd, Kcov_fd = calc_grad_alpha(GP, hp_vals)
@@ -458,11 +428,8 @@ class TestGradKmat(unittest.TestCase):
      
     def test_grad_varK_small_known_err(self):
          
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
         
                 GP, hp_vals = setup_GP_w_small_known_err(wellcond_mtd, kernel_type)
                 Kcov_grad_varK, Kcov_fd = calc_grad_varK(GP, hp_vals)
@@ -471,11 +438,8 @@ class TestGradKmat(unittest.TestCase):
      
     def test_grad_varK_big_known_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
         
                 GP, hp_vals = setup_GP_w_big_known_err(wellcond_mtd, kernel_type)
                 Kcov_grad_varK, Kcov_fd = calc_grad_varK(GP, hp_vals)
@@ -484,11 +448,8 @@ class TestGradKmat(unittest.TestCase):
      
     def test_grad_varK_small_unknown_err(self):
          
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
             
                 GP, hp_vals = setup_GP_w_small_unknown_err(wellcond_mtd, kernel_type)
                 Kcov_grad_varK, Kcov_fd = calc_grad_varK(GP, hp_vals)
@@ -497,12 +458,9 @@ class TestGradKmat(unittest.TestCase):
      
     def test_grad_varK_big_unknown_err(self):
          
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
                 
-                if wellcond_mtd == 'req_vmin':
-                    continue
-    
                 GP, hp_vals = setup_GP_w_big_unknown_err(wellcond_mtd, kernel_type)
                 Kcov_grad_varK, Kcov_fd = calc_grad_varK(GP, hp_vals)
                 
@@ -512,11 +470,8 @@ class TestGradKmat(unittest.TestCase):
     
     def test_grad_var_fval_small_unknown_err(self):
     
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
             
                 GP, hp_vals = setup_GP_w_small_unknown_err(wellcond_mtd, kernel_type)
                 Kcov_grad_var_fval, Kcov_fd = calc_grad_var_fval(GP, hp_vals)
@@ -525,11 +480,8 @@ class TestGradKmat(unittest.TestCase):
      
     def test_grad_var_fval_big_unknown_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
          
                 GP, hp_vals = setup_GP_w_big_unknown_err(wellcond_mtd, kernel_type)
                 Kcov_grad_var_fval, Kcov_fd = calc_grad_var_fval(GP, hp_vals)
@@ -540,11 +492,8 @@ class TestGradKmat(unittest.TestCase):
     
     def test_grad_var_fgrad_small_unknown_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
          
                 GP, hp_vals = setup_GP_w_small_unknown_err(wellcond_mtd, kernel_type)
                 Kcov_grad_var_fgrad, Kcov_fd = calc_grad_var_fgrad(GP, hp_vals)
@@ -553,12 +502,9 @@ class TestGradKmat(unittest.TestCase):
      
     def test_grad_var_fgrad_big_unknown_err(self):
         
-        for wellcond_mtd in list_wellcond_mtd:
+        for wellcond_mtd in list_wellcond_mtd_w_noise:
             for kernel_type in kernel_type_vec:
                 
-                if wellcond_mtd == 'req_vmin':
-                    continue
-         
                 GP, hp_vals = setup_GP_w_big_unknown_err(wellcond_mtd, kernel_type)
                 Kcov_grad_var_fgrad, Kcov_fd = calc_grad_var_fgrad(GP, hp_vals)
                 

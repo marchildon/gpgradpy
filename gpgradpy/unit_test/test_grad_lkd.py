@@ -17,9 +17,9 @@ from gpgradpy import GaussianProcess
 
 # wellcond_mtd_vec = [None, 'req_vmin', 'precon']
 wellcond_mtd_vec = [None, 'precon']
-kernel_type_vec  = ['SqExp', 'Ma5f2', 'RatQu']
+# wellcond_mtd_vec = ['req_vmin']
 
-wellcond_mtd_vec = ['req_vmin']
+kernel_type_vec  = ['SqExp', 'Ma5f2', 'RatQu']
 
 eps      = 1e-8
 use_grad = True
@@ -27,7 +27,7 @@ use_grad = True
 # x_eval   = np.random.rand(10,1)
 x_eval = 3*np.array([[0., 0.], [1., 0.], [0., 1.], [1., 1.]])
 
-dim      = x_eval.shape[1]
+n_eval, dim  = x_eval.shape
 n_der    = dim
 
 eta_dflt = 1e-1
@@ -36,7 +36,10 @@ eta_dflt = 1e-1
 rtol    = 1e-5
 atol    = 1e-6
 
-b_print_info = False
+b_print_info  = False
+
+bvec_use_grad     = np.ones(n_eval, dtype=bool)
+bvec_use_grad[-1] = False
 
 def get_hp_kernel(kernel_type):
     
@@ -71,7 +74,8 @@ var_fgrad_init  = 4
 
 ''' Calculate data '''
 
-obj_eval, grad_eval = call_fun(x_eval, use_grad)
+obj_eval, grad_eval_all = call_fun(x_eval, use_grad)
+grad_eval = grad_eval_all[bvec_use_grad,:]
 
 def make_hp_vals_wo_noise(GP_w0_noise, hp_kernel):
     
@@ -89,7 +93,7 @@ def setup_GP_wo_noise(wellcond_mtd, kernel_type):
     std_fval    = np.zeros(obj_eval.shape)
     std_fgrad   = np.zeros(grad_eval.shape)
     GP_w0_noise = GaussianProcess(dim, use_grad, kernel_type, wellcond_mtd)
-    GP_w0_noise.set_data(x_eval, obj_eval, std_fval, grad_eval, std_fgrad)
+    GP_w0_noise.set_data(x_eval, obj_eval, std_fval, grad_eval, std_fgrad, bvec_use_grad)
     
     GP_w0_noise._etaK = eta_dflt
     
@@ -99,7 +103,7 @@ def setup_GP_w_noise(wellcond_mtd, kernel_type):
     
     std_fval   = std_fgrad = None
     GP_w_noise = GaussianProcess(dim, use_grad, kernel_type, wellcond_mtd)
-    GP_w_noise.set_data(x_eval, obj_eval, std_fval, grad_eval, std_fgrad)
+    GP_w_noise.set_data(x_eval, obj_eval, std_fval, grad_eval, std_fgrad, bvec_use_grad)
     
     GP_w_noise._etaK = eta_dflt
     
@@ -218,10 +222,11 @@ class TestGrad(unittest.TestCase):
     def test_grad_theta_w_noise(self):
         
         for wellcond_mtd in wellcond_mtd_vec:
+            
+            if wellcond_mtd == 'req_vmin':
+                continue
+            
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
                 
                 b_noise_free = False
                 GP_w_noise   = setup_GP_w_noise(wellcond_mtd, kernel_type)
@@ -237,10 +242,11 @@ class TestGrad(unittest.TestCase):
     def test_grad_varK_w_noise(self):
         
         for wellcond_mtd in wellcond_mtd_vec:
+            
+            if wellcond_mtd == 'req_vmin':
+                continue
+            
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
                 
                 b_noise_free = False
                 GP_w_noise   = setup_GP_w_noise(wellcond_mtd, kernel_type)
@@ -256,10 +262,11 @@ class TestGrad(unittest.TestCase):
     def test_grad_var_fval_w_noise(self):
         
         for wellcond_mtd in wellcond_mtd_vec:
+            
+            if wellcond_mtd == 'req_vmin':
+                continue
+            
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
                 
                 b_noise_free = False
                 GP_w_noise   = setup_GP_w_noise(wellcond_mtd, kernel_type)
@@ -275,10 +282,11 @@ class TestGrad(unittest.TestCase):
     def test_grad_var_fgrad_w_noise(self):
         
         for wellcond_mtd in wellcond_mtd_vec:
+            
+            if wellcond_mtd == 'req_vmin':
+                continue
+            
             for kernel_type in kernel_type_vec:
-                
-                if wellcond_mtd == 'req_vmin':
-                    continue
                 
                 b_noise_free = False
                 GP_w_noise   = setup_GP_w_noise(wellcond_mtd, kernel_type)
@@ -293,3 +301,4 @@ class TestGrad(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

@@ -27,21 +27,14 @@ class LkdInfo:
 
 class calcLkdWoNoise:
     
-    def calc_lkd_all_wo_noise(self, xeval, theta, Kern_chofac, fval_scl, 
-                              grad_scl = None, KernGrad_hp = None, calc_lkd = True):    
+    def calc_lkd_all_wo_noise(self, theta, Kern_chofac, KernGrad_hp = None, calc_lkd = True):    
         '''
         Parameters
         ----------
-        xeval : 1d numpy array of floats of length dim
-            Location in the parameter space to evaluate the marginal log-likelihood.
         theta : 1d numpy array of floats of length dim
-            DESCRIPTION.
+            Hyperparameters for the kernel related to the characteristic length.
         Kern_chofac : scipy.linalg.cho_factor
             Cholesky factorization of the regularized kernel matrix.
-        fval_scl : 1d numpy array of floats of length n_eval
-            Evaluations of the value of the function of interest.
-        grad_scl : 2d numpy array of floats of size [n_eval, dim]
-            Evaluations of the gradient of the function of interest. The default is None.
         KernGrad_hp : 3d numpy array of size [dim, n_eval, n_eval], optional
             The derivative of the kernel matrix wrt the hyperparameters. The default is None.
         calc_lkd : bool, optional
@@ -52,21 +45,14 @@ class calcLkdWoNoise:
         class of type LkdInfo
         '''
         
-        n_eval = fval_scl.size
-
-        if self.use_grad:
-            assert grad_scl is not None
-            assert grad_scl.ndim == 2, f'grad_scl must be a 2 array but grad_scl.ndim = {grad_scl.ndim}'
-            n_data = n_eval * (self.dim + 1)
-        else:
-            n_data = n_eval
+        fval_scl, std_fval, grad_scl, std_fgrad = self.get_scl_eval_data(theta)
 
         ''' Calculate individual terms '''
         
         data_vec = self.make_data_vec(fval_scl, grad_scl)
         
         mean_model_val, mean_model_hp_grad, hp_beta, hp_beta_grad \
-            = self.calc_model_max_lkd(xeval, Kern_chofac, data_vec, KernGrad_hp)
+            = self.calc_model_max_lkd(Kern_chofac, data_vec, KernGrad_hp)
         
         hp_varK, hp_varK_grad \
             = self.calc_lkd_opt_varK(data_vec,     mean_model_val,
@@ -79,8 +65,8 @@ class calcLkdWoNoise:
             ln_det_Kern, ln_det_KernGrad = self.calc_detKmat(Kern_chofac, KernGrad_hp)
     
             ln_lkd, ln_lkd_grad \
-                = self.calc_lkd_w_Kern(n_data, hp_varK, theta, ln_det_Kern, 
-                                        hp_varK_grad, ln_det_KernGrad)
+                = self.calc_lkd_w_Kern(self.n_data, hp_varK, theta, ln_det_Kern, 
+                                       hp_varK_grad, ln_det_KernGrad)
         else:
             ln_det_Kern = ln_det_KernGrad = None
             ln_lkd      = ln_lkd_grad     = None
@@ -127,21 +113,14 @@ class calcLkdWoNoise:
     
 class calcLkdWNoise:   
         
-    def calc_lkd_all_w_noise(self, xeval, theta, Kcov_chofac, fval_scl, 
-                             grad_scl = None, Kcov_grad_hp = None, calc_lkd = True):    
+    def calc_lkd_all_w_noise(self, theta, Kcov_chofac, Kcov_grad_hp = None, calc_lkd = True):    
         '''
         Parameters
         ----------
-        xeval : 1d numpy array of floats of length dim
-            Location in the parameter space to evaluate the marginal log-likelihood.
         theta : 1d numpy array of floats of length dim
-            DESCRIPTION.
+            Hyperparameters for the kernel related to the characteristic length.
         Kcov_chofac : scipy.linalg.cho_factor
             Cholesky factorization of the covariance matrix.
-        fval_scl : 1d numpy array of floats of length n_eval
-            Evaluations of the value of the function of interest.
-        grad_scl : 2d numpy array of floats of size [n_eval, dim]
-            Evaluations of the gradient of the function of interest. The default is None.
         Kcov_grad_hp : 3d numpy array of size [dim, n_eval, n_eval], optional
             The derivative of the covariance matrix wrt the hyperparameters. The default is None.
         calc_lkd : bool, optional
@@ -152,16 +131,14 @@ class calcLkdWNoise:
         class of type LkdInfo
         '''
         
-        if self.use_grad:
-            assert grad_scl is not None
-            assert grad_scl.ndim == 2, f'grad_scl must be a 2 array but grad_scl.ndim = {grad_scl.ndim}'
-
+        fval_scl, std_fval, grad_scl, std_fgrad = self.get_scl_eval_data(theta)
+        
         ''' Calculate individual terms '''
         
         data_vec = self.make_data_vec(fval_scl, grad_scl)
         
         mean_model_val, mean_model_hp_grad, hp_beta, hp_beta_grad \
-            = self.calc_model_max_lkd(xeval, Kcov_chofac, data_vec, Kcov_grad_hp)
+            = self.calc_model_max_lkd(Kcov_chofac, data_vec, Kcov_grad_hp)
         
         # Calculate data_diff, ie the diff between the mean function and the data
         data_diff          = data_vec - mean_model_val
@@ -225,7 +202,7 @@ class CalcLkd(calcLkdWNoise, calcLkdWoNoise):
         '''
         
         x_scl, Rtensor = self.get_scl_x_w_dist()
-        fval_scl, std_fval, grad_scl, std_fgrad = self.get_scl_eval_data(hp_vals.theta)
+        # fval_scl, std_fval, grad_scl, std_fgrad = self.get_scl_eval_data(hp_vals.theta)
         
         # If some of the data is noisy then the hyperparameter varK must be 
         # calculated numerically
@@ -244,8 +221,8 @@ class CalcLkd(calcLkdWNoise, calcLkdWoNoise):
                 lkd_info        = LkdInfo(cond = cond, cond_grad = cond_grad)
             else:
                 b_chofac_good   = True
-                lkd_info        = self.calc_lkd_all_w_noise(x_scl,    hp_vals.theta, Kcov_chofac, 
-                                                            fval_scl, grad_scl,      Kcov_grad_hp)
+                lkd_info        = self.calc_lkd_all_w_noise(hp_vals.theta, Kcov_chofac, 
+                                                            Kcov_grad_hp)
             
             if calc_cond and calc_grad:
                 lkd_info.cond, lkd_info.cond_grad = self.calc_cond_w_grad(Kcov, Kcov_chofac, Kcov_grad_hp)
@@ -267,8 +244,8 @@ class CalcLkd(calcLkdWNoise, calcLkdWoNoise):
             else:
                 b_chofac_good   = True
                 
-                lkd_info = self.calc_lkd_all_wo_noise(x_scl, hp_vals.theta, Kern_chofac, 
-                                                      fval_scl, grad_scl, KernGrad_hp)
+                lkd_info = self.calc_lkd_all_wo_noise(hp_vals.theta, Kern_chofac, 
+                                                      KernGrad_hp)
                 
                 if calc_cond and calc_grad:
                     lkd_info.cond, lkd_info.cond_grad = self.calc_cond_w_grad(Kern_w_eta, Kern_chofac, KernGrad_hp)
