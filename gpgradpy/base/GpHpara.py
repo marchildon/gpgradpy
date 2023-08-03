@@ -98,6 +98,9 @@ class GpHpara:
         See definitions of inputs from the data class HparaOptzVal
         '''
         
+        if varK is not None:
+            assert varK > 0, f'varK must be positive but it is {varK}'
+        
         hp_vals      = self.make_hp_class(beta, theta, kernel, varK, var_fval, var_fgrad)
         self.hp_vals = hp_vals
     

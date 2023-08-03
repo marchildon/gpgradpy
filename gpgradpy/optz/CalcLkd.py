@@ -93,7 +93,7 @@ class calcLkdWoNoise:
     
     @staticmethod
     def calc_lkd_opt_varK(data_vec, mean_model_val, Kern_chofac,  
-                          mean_model_hp_grad = None, KernGrad_hp = None):
+                          mean_model_hp_grad = None, KernGrad_hp = None, varK_min = 1e-8):
         
         n_data      = data_vec.size
         denominator = n_data # For unbiased varK we would require denominator(n_data - self.beta_var_npara)
@@ -101,7 +101,8 @@ class calcLkdWoNoise:
         res         = data_vec - mean_model_val 
         invKern_res = linalg.cho_solve(Kern_chofac, res)
         
-        varK = np.dot(res, invKern_res) / denominator 
+        # Have varK_min to ensure varK is positive
+        varK = np.max((varK_min, np.dot(res, invKern_res) / denominator))
         
         if (mean_model_hp_grad is None) or (KernGrad_hp is None):
             varK_grad = None
