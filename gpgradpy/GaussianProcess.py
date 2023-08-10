@@ -90,7 +90,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     hp_var_fgrad_init    = 0.0
 
     range_theta          = [1e-10, 1e24] 
-    range_varK           = [1e-24, 1e8] # Used if varK is optimized numerically (when there is noisy data)
+    range_varK           = [1e-24, 1e14] # Used if varK is optimized numerically (when there is noisy data)
     range_var_fval       = [1e-8, 1e8]
     range_var_fgrad      = [1e-8, 1e8]
     
