@@ -69,6 +69,7 @@ class GpInfo:
                       f'\n set_eta_mtd_dflt     = {self.set_eta_mtd_dflt}'  + 
                       f'\n cond_max             = {self.cond_max:.2e}'  +
                       f'\n cond_max_target      = {self.cond_max_target:.2e}'  +
+                      f'\n cond_max_abs         = {self.cond_max_abs:.2e}'  +
                       f'\n condnum_norm         = {self.condnum_norm}'  +
                       f'\n min_nugget_dflt      = {self.min_nugget_dflt}'  +
                       f'\n vreq_frac            = {self.vreq_frac}'  + 

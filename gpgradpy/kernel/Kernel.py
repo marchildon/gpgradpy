@@ -235,7 +235,7 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
                 condK = np.linalg.cond(Kscld, p = self.condnum_norm) 
                 
                 if condK > (1.1 * self.cond_max):
-                    print(f'*** WARNING: condK = {condK:.2e} which is greater than condmax = {self.cond_max:.2e}')
+                    print(f'*** WARNING: condK = {condK:.2e} which is greater than cond_max = {self.cond_max:.2e}')
             else:
                 condK = None
             
@@ -276,7 +276,7 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             if calc_cond:
                 condK = np.linalg.cond(Kcov, p = self.condnum_norm)  
                 
-                if condK > self.condmax_absolute:
+                if condK > self.cond_max_abs:
                     calc_chofac = False
             else:
                 condK = None

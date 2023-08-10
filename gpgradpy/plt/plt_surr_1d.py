@@ -22,7 +22,6 @@ dim = 1
 # Other parameters
 n_eval          = 4     # No. of data points where the function is evaluated
 use_grad        = True
-cond_max        = 1e10
 kernel_type     = 'SqExp' # 'SqExp',' 'Maff2', 'RatQu'
 
 wellcond_mtd    = 'precon' # 'req_vmin' # 'req_vmin' # 'req_vmin' 'precon' None

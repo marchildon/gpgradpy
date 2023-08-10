@@ -54,13 +54,14 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
                           'dflt_vmax']     # set max xdist to dist_max_dflt
 
     set_eta_mtd_dflt    = 'Kbase_eta' # Used if selected wellcond_mtd does not have a default method, ie wellcond_mtd == None
-                                      # 'Kbase_eta' : Use req eta for Kbase, ie eta =  n_eval / (condmax - 1)
-                                      # 'Kbase_eta_w_dim' : Use eta =  n_eval (dim + 1) / (condmax - 1)
+                                      # 'Kbase_eta' : Use req eta for Kbase, ie eta =  n_eval / (cond_max - 1)
+                                      # 'Kbase_eta_w_dim' : Use eta =  n_eval (dim + 1) / (cond_max - 1)
                                       # 'dflt_eta'  : min_nugget_dflt is used
 
+    # Condition number: cond_max_target <= cond_max << cond_max_abs
+    cond_max_target     = 1e10  # Used to select the nugget value
     cond_max            = 1e10  # Used for the optz constraint of the hyperparameters
-    cond_max_target     = 1e10  # Used to select the nugget value, also require cond_max_target <= cond_max
-    condmax_absolute    = 1e16  # If the condition number is greater than this the Cholesky decomposition is not attempted
+    cond_max_abs        = 1e16  # Cholesky decomposition is not attempted if the condition number is greater than this value 
     condnum_norm        = 2     # The type of norm used to calculate the condition number (2 or 'fro'), using 2 is recommended
     
     min_nugget_dflt     = 1e-8  # Default min nugget value if set_eta_mtd_dflt == dflt_eta

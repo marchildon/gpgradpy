@@ -79,18 +79,18 @@ class GpWellCondVreq:
         if vmin is None:
             vmin = self.calc_vreq(n_eval)
         
-        condmax = self.cond_max_target
+        cond_max = self.cond_max_target
         
         # Calculate req vmin for gradient-enhanced GP
         if n_eval == 1:
-            eta_Kgrad = n_eval / (condmax - 1)
+            eta_Kgrad = n_eval / (cond_max - 1)
         else:
             assert vmin >= np.sqrt(2), 'This method requires that vmin = {vmin} >= sqrt(2)'
             
             v_frac      = 2 * np.sqrt(self.dim) / vmin
             u_eigmax    = 1 + (n_eval - 1) * v_frac * np.exp(1/v_frac - 1)
-            eta_Kgrad   = u_eigmax / (condmax - 1)          
-            eta_Kbase   = self.calc_nugget_Kbase(n_eval, condmax)
+            eta_Kgrad   = u_eigmax / (cond_max - 1)          
+            eta_Kbase   = self.calc_nugget_Kbase(n_eval, cond_max)
             
             assert v_frac >= 0.99, f'This term should be greater or equal to 1, v_frac = {v_frac}'
             assert eta_Kgrad >= 0.99 * eta_Kbase, f'We expect that eta_Kgrad > eta_Kbase but eta_Kgrad = {eta_Kgrad}, eta_Kbase = {eta_Kbase}'
