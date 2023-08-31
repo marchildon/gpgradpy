@@ -163,8 +163,8 @@ class KernelMatern5f2Grad:
         
         nu_mat = np.sqrt(nu_mat)
 
-        Abase     = np.exp(-np.sqrt(5) * nu_mat)
-        sqrt5     = np.sqrt(5)
+        Abase   = np.exp(-np.sqrt(5) * nu_mat)
+        sqrt5   = np.sqrt(5)
         mat1    = (5.0/3.0) * (1 + sqrt5 * nu_mat) * Abase
         
         KernGrad = np.zeros((n1*(dim+ 1), n2*(dim + 1)))

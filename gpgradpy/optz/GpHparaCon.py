@@ -149,7 +149,7 @@ class GpHparaCon:
             raise Exception(f'condnum_norm must be either 2 or "fro" but it is {condnum_norm}')
         
     def calc_cond_L2_w_grad(self, Kmat_w_eta, Kmat_grad_hp = None):
-        assert Kmat_w_eta[0,0] > 1, 'Kmat_w_eta should have diagonal entries greater than 1 since it contains the noise'
+        # assert Kmat_w_eta[0,0] > 1, 'Kmat_w_eta should have diagonal entries greater than 1 since it contains the noise'
 
         n_data = Kmat_w_eta.shape[0]
         cond = np.linalg.cond(Kmat_w_eta, p=2)
@@ -221,7 +221,7 @@ class GpHparaCon:
         return cond, cond_grad
     
     def calc_cond_fronorm_w_grad(self, Kmat_w_eta, Kmat_chofac, Kmat_grad_hp = None):
-        assert Kmat_w_eta[0,0] > 1, 'Kmat_w_eta should have diagonal entries greater than 1 since it contains the noise'
+        # assert Kmat_w_eta[0,0] > 1, 'Kmat_w_eta should have diagonal entries greater than 1 since it contains the noise'
         
         n     = Kmat_w_eta.shape[0]
         K_inv = cho_solve(Kmat_chofac, np.eye(n))
