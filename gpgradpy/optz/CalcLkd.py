@@ -208,7 +208,7 @@ class CalcLkd(calcLkdWNoise, calcLkdWoNoise):
         # If some of the data is noisy then the hyperparameter varK must be 
         # calculated numerically
         if self.b_has_noisy_data:
-            Kern, _, Kcov, Kcov_chofac, cond_K \
+            Kern, _, Kcov, Kcov_chofac, cond_K, etaK, idx_etaK_argmax \
                 = self.calc_all_K_w_chofac(Rtensor, hp_vals, calc_cond = calc_cond)
             
             if calc_grad:
@@ -230,7 +230,7 @@ class CalcLkd(calcLkdWNoise, calcLkdWoNoise):
             else:
                 lkd_info.cond = cond_K
         else:
-            Kern, _, Kern_w_eta, Kern_chofac, cond_K \
+            Kern, _, Kern_w_eta, Kern_chofac, cond_K, etaK, idx_etaK_argmax \
                 = self.calc_Kern_w_chofac(Rtensor, hp_vals, calc_cond = calc_cond)
             
             if calc_grad:

@@ -10,7 +10,7 @@ import numpy as np
 
 class GpHparaGrad:
     
-    def calc_KernGrad_hp(self, hp_optz_info, hp_vals, Rtensor):
+    def calc_KernGrad_hp(self, hp_optz_info, hp_vals, Rtensor, etaK = None):
         '''
         Parameters
         ----------
@@ -38,13 +38,13 @@ class GpHparaGrad:
                 = self.calc_Kern_grad_theta(Rtensor, hp_vals.theta, hp_vals.kernel, self.bvec_use_grad)
                 
             if self.wellcond_mtd == 'precon':
-                eta = self._etaK
+                if etaK is None: etaK = self._etaK
                 
                 pvec, pvec_inv, grad_precon \
                     = self.calc_Kern_precon(self.n_eval, self.n_grad, hp_vals.theta, 
                                             calc_grad = True, b_return_vec = True)
                 gamma_vec  = pvec[self.n_eval:]
-                grad_pvec2 = (2 * eta) * gamma_vec[:,None] * grad_precon[self.n_eval:,:]
+                grad_pvec2 = (2 * etaK) * gamma_vec[:,None] * grad_precon[self.n_eval:,:]
                 
                 for i in range(self.dim):
                     KernGrad_hp[hp_optz_info.idx_theta[i], self.n_eval:, self.n_eval:] += np.diag(grad_pvec2[:,i])
@@ -103,8 +103,6 @@ class GpHparaGrad:
         Kcov_grad_th = varK * self.calc_Kern_grad_theta(Rtensor, hp_vals.theta, hp_vals.kernel, self.bvec_use_grad) 
         
         if self.wellcond_mtd == 'precon':
-            eta = self._etaK
-            
             pvec, pvec_inv, grad_precon \
                 = self.calc_Kern_precon(self.n_eval, self.n_grad, hp_vals.theta, 
                                         calc_grad = True, b_return_vec = True)
@@ -116,14 +114,15 @@ class GpHparaGrad:
                 vec_var_fgrad = std_fgrad.reshape(std_fgrad.size, order='f')**2
             else:
                 vec_var_fgrad = np.full(self.n_grad * self.dim, hp_vals.var_fgrad)
-                
+            
+            eta  = self._etaK
             bvec = vec_var_fgrad > (pvec[self.n_eval:]**2 * varK * eta)
             
             for i in range(self.dim):
-                P_2dPdth       = (2 * eta * varK) * gamma_vec * gamma_grad[:,i]
-                P_2dPdth[bvec] = 0
+                dEg_dth       = (2 * eta * varK) * gamma_vec * gamma_grad[:,i]
+                dEg_dth[bvec] = 0
                 
-                Kcov_grad_th[i, self.n_eval:,self.n_eval:] += np.diag(P_2dPdth)
+                Kcov_grad_th[i, self.n_eval:,self.n_eval:] += np.diag(dEg_dth)
             
         return Kcov_grad_th
 
