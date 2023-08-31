@@ -196,8 +196,6 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
             lkd_all[i,j]   = lkd_info.ln_lkd
             condK_all[i,j] = lkd_info.cond
             
-            # etaK_all[i,j] = GP._temp_etaK
-            
     log10_condK_all = np.log10(condK_all)
     # etaK_scl_all    = GP._etaK / etaK_all
     print(f'wellcond_mtd = {wellcond_mtd}, cond: min = {np.min(log10_condK_all):.2}, max = {np.max(log10_condK_all):.2}')
