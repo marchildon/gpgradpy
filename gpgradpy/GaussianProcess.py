@@ -58,6 +58,9 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
                                       # 'Kbase_eta_w_dim' : Use eta =  n_eval (dim + 1) / (cond_max - 1)
                                       # 'dflt_eta'  : min_nugget_dflt is used
 
+    use_noisy_precon    = True # Applies a 2nd precondition if wellcond_mtd == 'precon' for noisy data
+    use_const_eta       = True # If False for the precon method then a variable nugget is used
+
     # Condition number: cond_max_target <= cond_max << cond_max_abs
     cond_max_target     = 1e10  # Used to select the nugget value
     cond_max            = 1e10  # Used for the optz constraint of the hyperparameters
