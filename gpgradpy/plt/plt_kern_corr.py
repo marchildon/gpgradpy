@@ -15,21 +15,21 @@ import matplotlib.pyplot as plt
 save_figs         = True
 
 plt_sq_exp        = True 
-plt_Ma5f2         = True
-plt_rat_qd        = True
-plot_together_fwf = True
+plt_Ma5f2         = False
+plt_rat_qd        = False
+plot_together_fwf = False
 
 # Hyperparameter for the rational quadratic kernel
 alpha = 2
 
 # Plotting options
 nr    = 100
-rmin  = 6
+rmin  = 4
 rvec  = np.linspace(-rmin, rmin, nr)
 Xrvec, Yrvec = np.meshgrid(rvec, rvec)
 
 legend_fs   = 12
-label_fs    = 16
+label_fs    = 15
 tick_fs     = 14
 
 dpi     = 800
@@ -37,9 +37,9 @@ folders = path.join('figures', 'kern_corr')
 
 plot_style = ['b-', 'g-', 'm-', 'c-', 'k-']
 
-labels_corr_1d = [r'$\mathrm{corr} \left( f, f \right)$', 
-                  r'$\mathrm{corr} \left( f, \frac{\partial f}{\partial x} \right)$', 
-                  r'$\mathrm{corr} \left( \frac{\partial f}{\partial x}, \frac{\partial f}{\partial x} \right)$']
+labels_corr_1d = [r'$\mathrm{corr} \left( f(x), f(y) \right)$', 
+                  r'$\mathrm{corr} \left( \frac{\partial f(x)}{\partial x} , f(y) \right)$', 
+                  r'$\mathrm{corr} \left( \frac{\partial f(x)}{\partial x}, \frac{\partial f(y)}{\partial y} \right)$']
 
 # labels_corr_1d = [r'$k(\tilde{r})$', 
 #                   r'$\frac{dk(\tilde{r})}{d\tilde{r}}$', 
@@ -97,7 +97,11 @@ def make_1d_plot():
     
     fig, ax = plt.subplots(figsize=(5, 4))
     ax.set_xlabel(r'$\tilde{r} = \gamma(x - y)$', fontsize = label_fs)
+    ax.set_ylabel(r'Correlation', size = label_fs)
     ax.tick_params(axis='both', labelsize=tick_fs)
+    
+    ax.set_ylim([-1.25, 1.1])
+    
     ax.grid()
     
     return fig, ax
@@ -110,7 +114,9 @@ def plt_1d_corr(corr_fwf, corr_fwg, corr_gwg, str_kern):
     ax1.plot(rvec, corr_fwg, plot_style[1], label = labels_corr_1d[1])
     ax1.plot(rvec, corr_gwg, plot_style[2], label = labels_corr_1d[2])
     
-    ax1.legend(fontsize = legend_fs, loc = 'upper left')
+    # ax1.legend(fontsize = legend_fs, loc = 'upper right')
+    ax1.legend(fontsize = legend_fs, loc = 'lower center', ncol=2)
+    
     fig1.tight_layout()
     
     if save_figs:
