@@ -24,9 +24,8 @@ class GpEvalModel(GpMeanFun):
         
         self._hp_vals_model_setup = copy.copy(self.hp_vals)
         
-        theta                 = self.hp_vals.theta
         x_scl, Rtensor        = self.get_scl_x_w_dist()
-        fval_scl, _, grad_scl = self.get_scl_eval_data(theta)[:3]
+        fval_scl, _, grad_scl = self.get_scl_eval_data()[:3]
         
         mean_fun_val, mean_fun_grad = self.eval_mean_fun(x_scl, self.hp_vals.beta, 
                                                          bvec_use_grad = self.bvec_use_grad,
@@ -137,7 +136,7 @@ class GpEvalModel(GpMeanFun):
             d2mudx2  = d2sigdx2 = None
         
         (mu_init, sig_init, dmudx_init, dsigdx_init, d2mudx2_init, d2sigdx2_init) \
-            = self.data_scl_2_init(theta, mu, sig, dmudx, dsigdx, d2mudx2, d2sigdx2)
+            = self.data_scl_2_init(mu, sig, dmudx, dsigdx, d2mudx2, d2sigdx2)
         
         return (mu_init, sig_init), (dmudx_init, dsigdx_init), (d2mudx2_init, d2sigdx2_init)
 
@@ -200,7 +199,7 @@ class GpEvalModel(GpMeanFun):
         
         x2model_scl           = self.x_init_2_scl(x2model_init)
         xeval_scl             = self.x_init_2_scl(xeval_init)
-        fval_scl, _, grad_scl = self.data_init_2_scl(theta, fval_init, None, grad_init)[:3]
+        fval_scl, _, grad_scl = self.data_init_2_scl(fval_init, None, grad_init)[:3]
         
         return self.calc_model_mean_w_data_scl(x2model_scl, KernEta_chofac, hp_beta, 
                                                xeval_scl, fval_scl, grad_scl, theta, calc_grad)
@@ -248,7 +247,7 @@ class GpEvalModel(GpMeanFun):
             model_dmudx = None
             
         model_mu, _, model_dmudx \
-            = self.data_scl_2_init(theta, model_mu, None, model_dmudx)[:3]
+            = self.data_scl_2_init(model_mu, None, model_dmudx)[:3]
 
         return model_mu, model_dmudx
     

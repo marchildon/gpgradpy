@@ -45,7 +45,7 @@ class calcLkdWoNoise:
         class of type LkdInfo
         '''
         
-        fval_scl, std_fval, grad_scl, std_fgrad = self.get_scl_eval_data(theta)
+        fval_scl, std_fval, grad_scl, std_fgrad = self.get_scl_eval_data()
 
         ''' Calculate individual terms '''
         
@@ -132,7 +132,7 @@ class calcLkdWNoise:
         class of type LkdInfo
         '''
         
-        fval_scl, std_fval, grad_scl, std_fgrad = self.get_scl_eval_data(theta)
+        fval_scl, std_fval, grad_scl, std_fgrad = self.get_scl_eval_data()
         
         ''' Calculate individual terms '''
         
@@ -203,7 +203,6 @@ class CalcLkd(calcLkdWNoise, calcLkdWoNoise):
         '''
         
         x_scl, Rtensor = self.get_scl_x_w_dist()
-        # fval_scl, std_fval, grad_scl, std_fgrad = self.get_scl_eval_data(hp_vals.theta)
         
         # If some of the data is noisy then the hyperparameter varK must be 
         # calculated numerically

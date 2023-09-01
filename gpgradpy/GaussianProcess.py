@@ -58,7 +58,6 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
                                       # 'Kbase_eta_w_dim' : Use eta =  n_eval (dim + 1) / (cond_max - 1)
                                       # 'dflt_eta'  : min_nugget_dflt is used
 
-    use_noisy_precon    = True # Applies a 2nd precondition if wellcond_mtd == 'precon' for noisy data
     use_const_eta       = True # If False for the precon method then a variable nugget is used
 
     # Condition number: cond_max_target <= cond_max << cond_max_abs
@@ -396,19 +395,19 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     def get_init_eval_data(self):
         return self._fval_in, self._std_fval_in, self._grad_in, self._std_grad_in
     
-    def get_scl_eval_data(self, theta):
+    def get_scl_eval_data(self):
         
         fval_init, std_fval_init, fgrad_init, std_fgrad_init = self.get_init_eval_data()
         
         fval_scl, std_fval_scl, fgrad_scl, std_fgrad_scl \
-            = self.data_init_2_scl(theta, fval_init, std_fval_init, fgrad_init, std_fgrad_init)[:4]
+            = self.data_init_2_scl(fval_init, std_fval_init, fgrad_init, std_fgrad_init)[:4]
         
         std_fval_scl_out  = std_fval_scl  if self.known_eps_fval  else None
         std_fgrad_scl_out = std_fgrad_scl if self.known_eps_fgrad else None
         
         return fval_scl, std_fval_scl_out, fgrad_scl, std_fgrad_scl_out
         
-    def data_init_2_scl(self, theta, 
+    def data_init_2_scl(self, 
                         mu_in      = None, sig_in      = None, 
                         dmudx_in   = None, dsigdx_in   = None, 
                         d2mudx2_in = None, d2sigdx2_in = None):
@@ -420,7 +419,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         else:
             return mu_in, sig_in, dmudx_in, dsigdx_in, d2mudx2_in, d2sigdx2_in
     
-    def data_scl_2_init(self, theta, 
+    def data_scl_2_init(self,
                         mu_scl      = None, sig_scl      = None, 
                         dmudx_scl   = None, dsigdx_scl   = None, 
                         d2mudx2_scl = None, d2sigdx2_scl = None):
