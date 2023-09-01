@@ -126,8 +126,7 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             self.calc_Kern_grad_alpha   = self.calc_KernBase_grad_alpha
 
     def calc_Kern_w_chofac(self, Rtensor, hp_vals, 
-                           noise_vec = None,
-                           calc_chofac   = True, calc_cond = False):
+                           noise_vec = None, calc_chofac = True, calc_cond = False):
         ''' 
         See input info for calc_all_K_w_chofac()
         '''
@@ -194,6 +193,11 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             assert hp_vals.varK  is not None, f'varK is not provided and hp_vals.varK is None, hp_vals = {hp_vals}'
             varK = hp_vals.varK 
             
+        if b_normlz_w_varK:
+            varK = 1.0
+        else:
+            assert varK > 0, f'varK must be positive but varK = {varK}'
+            
         assert np.sum(np.isnan(theta)) == 0, f'There are nan values theta = {theta}'
         
         ''' Calculations '''
@@ -201,52 +205,47 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         # Default values
         idx_etaK_argmax = None
         
-        Kern = self.calc_Kern(Rtensor, theta, hp_kernel, self.bvec_use_grad, self.bvec_use_grad)
+        if noise_vec is None:
+            noise_vec = self.calc_noise_vec(hp_vals)
+            
+        n_data = noise_vec.size
+        
+        if self.use_grad:
+            Kern = self.calc_Kern(Rtensor, theta, hp_kernel, self.bvec_use_grad, self.bvec_use_grad)
+        else:
+            Kern = self.calc_Kern(Rtensor, theta, hp_kernel)
+            
+        Kern_w_noise = Kern + np.diag(noise_vec / varK) 
         
         if self.wellcond_mtd == 'precon':
             
             assert self.use_grad is True, 'self.wellcond_mtd should be None if use_grad is False'
             
-            P1, P1inv = self.calc_Kern_precon(self.n_eval, self.n_grad, theta)[:2]
-            Kcor      = P1inv @ Kern @ P1inv
+            # P1, P1inv = self.calc_Kern_precon(self.n_eval, self.n_grad, theta)[:2]
+            pvec    = np.sqrt(np.diag(Kern_w_noise))
+            P       = np.diag(pvec)
+            P_inv   = np.diag(1/pvec)
+            Kcor    = P_inv @ Kern_w_noise @ P_inv
             
-            if noise_vec is None:
-                if self.use_const_eta:
-                    etaK = self._etaK
-                else:
-                    sum_rows_Kcor   = np.sum(np.abs(Kcor), axis=1)
-                    idx_etaK_argmax = np.argmax(sum_rows_Kcor)
-                    etaK            = sum_rows_Kcor[idx_etaK_argmax] / (self.cond_max_target - 1)
-                
-                # nugget = self._etaK
-                    
-                noise_vec = self.make_vec_var_noise(hp_vals, etaK, varK)
-            
-            Kern_w_eta  = Kern + np.diag(noise_vec / varK)
-            Kcor_w_eta  = P1inv @ Kern_w_eta @ P1inv
-            
-            if b_normlz_w_varK is False:
-                Kcov = varK * Kern_w_eta
+            if self.use_const_eta:
+                etaK = self._etaK
             else:
-                Kcov = 1.0 * Kern_w_eta
+                sum_rows_Kcor   = np.sum(np.abs(Kcor), axis=1)
+                idx_etaK_argmax = np.argmax(sum_rows_Kcor)
+                etaK            = sum_rows_Kcor[idx_etaK_argmax] / (self.cond_max_target - 1)
             
-            # Apply 2nd preconditioning to handle case with noisy obj or grad
-            # This ensures the diagonal is 1 + nugget
-            if self.use_noisy_precon:
-                p2vec = np.sqrt(np.diag(Kcor_w_eta)) 
-                P2inv = np.diag(1 / p2vec)
-                Pall  = np.diag(p2vec) @ P1
-            else:
-                P2inv = np.eye(self.n_data)
-                Pall  = P1
-            
-            Kscld = P2inv @ Kcor_w_eta @ P2inv
+            Kcov_precon = varK * (Kcor + etaK * np.eye(n_data))
+            Kcov        = P @ Kcov_precon @ P
+            # if b_normlz_w_varK:
+            #     Kcov_precon = 1.0 * (Kcor + etaK * np.eye(n_data))
+            # else:
+            #     Kcov_precon = varK * (Kcor + etaK * np.eye(n_data))
             
             if calc_cond:
-                condK = np.linalg.cond(Kscld, p = self.condnum_norm) 
+                condK = np.linalg.cond(Kcov_precon, p = self.condnum_norm) 
                 
                 if condK > (1.1 * self.cond_max):
-                    print(f'*** WARNING: condK = {condK:.2e} which is greater than cond_max = {self.cond_max:.2e}')
+                    print(f'*** WARNING: condK = {condK:.2e} which is greater than cond_max = {self.cond_max:.2e} ***')
             else:
                 condK = None
             
@@ -254,19 +253,20 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             
             if calc_chofac:
                 try:
-                    if b_normlz_w_varK:
-                        Kscld_chofac = cho_factor(Kscld, lower = True)
-                    else:
-                        Kscld_chofac = cho_factor(varK * Kscld, lower = True)
+                    # if b_normlz_w_varK:
+                    #     Kcov_precon_chofac = cho_factor(Kcov_precon, lower = True)
+                    # else:
+                    #     Kcov_precon_chofac = cho_factor(varK * Kcov_precon, lower = True)
                         
-                    Kcov_chofac = (Pall @ Kscld_chofac[0], Kscld_chofac[1])
+                    Kcov_precon_chofac = cho_factor(Kcov_precon, lower = True)
+                    Kcov_chofac        = (P @ Kcov_precon_chofac[0], Kcov_precon_chofac[1])
                     
                     # Kcor_chofac = cho_factor(Kcor_w_eta, lower = True)
                     # Kcov_chofac = (np.sqrt(sigK) * (P1 @ Kcor_chofac[0]), Kcor_chofac[1])
                 except:
                     Kcov_chofac = None
                     
-                    eig_val = np.linalg.eigvalsh(Kcor_w_eta)
+                    eig_val = np.linalg.eigvalsh(Kcov_precon)
                     min_eig = np.min(eig_val)
                     cond_L2 = np.max(eig_val) / min_eig
                     
@@ -277,16 +277,8 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
                 
         else:
             etaK = self._etaK
-            if noise_vec is None:
-                noise_vec = self.make_vec_var_noise(hp_vals, etaK, varK)
-            
             Kcor = None
-            # Kern = self.calc_Kern(Rtensor, theta, hp_kernel, self.bvec_use_grad, self.bvec_use_grad)
-            
-            if b_normlz_w_varK:
-                Kcov = Kern + np.diag(noise_vec / varK)
-            else:
-                Kcov = varK * Kern + np.diag(noise_vec)
+            Kcov = varK * (Kern_w_noise + etaK * np.eye(n_data))
         
             if calc_cond:
                 condK = np.linalg.cond(Kcov, p = self.condnum_norm)  
@@ -318,17 +310,12 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         
         return Kern, Kcor, Kcov, Kcov_chofac, condK, etaK, idx_etaK_argmax
 
-    def make_vec_var_noise(self, hp_vals, nugget, varK):
+    def calc_noise_vec(self, hp_vals):
         '''
         Parameters
         ----------
         hp_vals : HparaOptzVal from GpHpara
             Class that contains all of the hyperparameters
-        nugget : float
-            Minimum value to be added to the diagonal of the kernel matrix to 
-            regularize it.
-        varK : float
-            Hyperparameter.
 
         Returns
         -------
@@ -338,13 +325,16 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         
         ''' Preliminary '''
         
-        assert not np.isnan(varK), f'We have varK = {varK}'
-        
-        theta = hp_vals.theta 
-        std_fval, _, std_fgrad = self.get_scl_eval_data(theta)[1:]
+        std_fval, _, std_fgrad = self.get_scl_eval_data()[1:]
         
         if self.use_grad == False:
-            var_noise = np.maximum(std_fval, nugget * varK)
+            if self.known_eps_fval:
+                assert hp_vals.var_fval is None
+                assert not np.any(np.isnan(std_fval)), f'There are nan values: std_fval = {std_fval}'
+                var_noise = std_fval**2
+            else:
+                var_noise = np.full(std_fval.size, hp_vals.var_fval)
+            
         else:
             var_noise = np.zeros(self.n_data)
             
@@ -364,19 +354,247 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             else:
                 var_noise[self.n_eval:] = hp_vals.var_fgrad
     
-            ''' Make nugget vector '''
-            
-            if self.wellcond_mtd == 'precon':
-                pvec       = self.calc_Kern_precon(self.n_eval, self.n_grad, theta, b_return_vec = True)[0]
-                nugget_vec = pvec**2 * nugget * varK
-            else:
-                nugget_vec = np.full(self.n_data, nugget * varK)
-            
-            # Scale and set minimum noise with the nugget
-            var_noise = np.maximum(var_noise, nugget_vec)
-            
-            if np.any(np.isnan(var_noise)):
-                print(f'There are nan in var_noise. varK = {varK:.1e}, theta = {theta}')
-                print(f'var_noise = \n{var_noise}')
-        
         return var_noise
+
+    # def calc_all_K_w_chofac(self, Rtensor, hp_vals,  
+    #                         noise_vec   = None,
+    #                         calc_chofac = True, calc_cond       = False,
+    #                         varK        = None, b_normlz_w_varK = False):
+    #     '''
+    #     Parameters
+    #     ----------
+    #     Rtensor : 3D numpy tensor
+    #         Relative distance between all data points in each coordinate 
+    #         direction. Calculated with calc_Rtensor() from CommonFun
+    #     hp_vals : HparaOptzVal from GpHpara
+    #         Class that contains all of the hyperparameters
+    #     bvec_use_grad : 1D numpy array of bool of length n_eval, optional
+    #         Indicates which gradients to use to construct the kernel matrix. 
+    #         The default is None.
+    #     noise_vec : 1D numpy array, optional
+    #         Noise for each of the function evalution values and gradients 
+    #         (if needed). The default is None.
+    #     calc_chofac : bool, optional
+    #         Set to True to calculate the Cholesky decompositon of the 
+    #         regularized kernel matrix. The default is True.
+    #     calc_cond : bool, optional
+    #         Set to true to calculate the condition number of the . The default is False.
+    #     varK : float, optional
+    #         Value for the hyperparameter varK. The default is None.
+    #     b_normlz_w_varK : bool, optional
+    #         If set to True, the kernel matrix is not multiplied by varK. Used
+    #         when evaluating the surrogate in GpEvalModel. The default is False.
+
+    #     Returns
+    #     -------
+    #     Kern : 2D numpy array
+    #         Kernel matrix.
+    #     Kcor : 2D numpy array
+    #         Correlation matrix.
+    #     Kcov : 2D numpy array
+    #         Covariance matrix.
+    #     Kcov_chofac : scipy.linalg.cho_factor
+    #         Cholesky factorization of Kcov.
+    #     condK : float
+    #         Condition number of either the regularized Kcov matrix, or in the 
+    #         preconditioned case, the condition number of the regularized Kcor.
+    #     '''
+        
+    #     ''' Check inputs ''' 
+        
+    #     theta     = hp_vals.theta 
+    #     hp_kernel = hp_vals.kernel
+        
+    #     dim, n1, n2 = Rtensor.shape
+    #     assert n1 == n2, 'Incompatible shapes' 
+        
+    #     if varK is None:
+    #         assert hp_vals.varK  is not None, f'varK is not provided and hp_vals.varK is None, hp_vals = {hp_vals}'
+    #         varK = hp_vals.varK 
+            
+    #     assert np.sum(np.isnan(theta)) == 0, f'There are nan values theta = {theta}'
+        
+    #     ''' Calculations '''
+        
+    #     # Default values
+    #     idx_etaK_argmax = None
+        
+    #     Kern = self.calc_Kern(Rtensor, theta, hp_kernel, self.bvec_use_grad, self.bvec_use_grad)
+        
+    #     if self.wellcond_mtd == 'precon':
+            
+    #         assert self.use_grad is True, 'self.wellcond_mtd should be None if use_grad is False'
+            
+    #         P1, P1inv = self.calc_Kern_precon(self.n_eval, self.n_grad, theta)[:2]
+    #         Kcor      = P1inv @ Kern @ P1inv
+            
+    #         if noise_vec is None:
+    #             if self.use_const_eta:
+    #                 etaK = self._etaK
+    #             else:
+    #                 sum_rows_Kcor   = np.sum(np.abs(Kcor), axis=1)
+    #                 idx_etaK_argmax = np.argmax(sum_rows_Kcor)
+    #                 etaK            = sum_rows_Kcor[idx_etaK_argmax] / (self.cond_max_target - 1)
+                
+    #             # nugget = self._etaK
+                    
+    #             noise_vec = self.make_vec_var_noise(hp_vals, etaK, varK)
+            
+    #         Kern_w_eta  = Kern + np.diag(noise_vec / varK)
+    #         Kcor_w_eta  = P1inv @ Kern_w_eta @ P1inv
+            
+    #         if b_normlz_w_varK is False:
+    #             Kcov = varK * Kern_w_eta
+    #         else:
+    #             Kcov = 1.0 * Kern_w_eta
+            
+    #         # Apply 2nd preconditioning to handle case with noisy obj or grad
+    #         # This ensures the diagonal is 1 + nugget
+    #         if self.use_noisy_precon:
+    #             p2vec = np.sqrt(np.diag(Kcor_w_eta)) 
+    #             P2inv = np.diag(1 / p2vec)
+    #             Pall  = np.diag(p2vec) @ P1
+    #         else:
+    #             P2inv = np.eye(self.n_data)
+    #             Pall  = P1
+            
+    #         Kscld = P2inv @ Kcor_w_eta @ P2inv
+            
+    #         if calc_cond:
+    #             condK = np.linalg.cond(Kscld, p = self.condnum_norm) 
+                
+    #             if condK > (1.1 * self.cond_max):
+    #                 print(f'*** WARNING: condK = {condK:.2e} which is greater than cond_max = {self.cond_max:.2e}')
+    #         else:
+    #             condK = None
+            
+    #         time_chofac_start = time.time()
+            
+    #         if calc_chofac:
+    #             try:
+    #                 if b_normlz_w_varK:
+    #                     Kscld_chofac = cho_factor(Kscld, lower = True)
+    #                 else:
+    #                     Kscld_chofac = cho_factor(varK * Kscld, lower = True)
+                        
+    #                 Kcov_chofac = (Pall @ Kscld_chofac[0], Kscld_chofac[1])
+                    
+    #                 # Kcor_chofac = cho_factor(Kcor_w_eta, lower = True)
+    #                 # Kcov_chofac = (np.sqrt(sigK) * (P1 @ Kcor_chofac[0]), Kcor_chofac[1])
+    #             except:
+    #                 Kcov_chofac = None
+                    
+    #                 eig_val = np.linalg.eigvalsh(Kcor_w_eta)
+    #                 min_eig = np.min(eig_val)
+    #                 cond_L2 = np.max(eig_val) / min_eig
+                    
+    #                 log10th = np.log10(theta)
+    #                 print(f'Failed Cho factorization of Kcor_w_eta, cond_L2 = {cond_L2:.2e}, eig min = {min_eig:.2e}, log10(th) = {log10th}')
+    #         else:
+    #             Kcov_chofac = None
+                
+    #     else:
+    #         etaK = self._etaK
+    #         if noise_vec is None:
+    #             noise_vec = self.make_vec_var_noise(hp_vals, etaK, varK)
+            
+    #         Kcor = None
+    #         # Kern = self.calc_Kern(Rtensor, theta, hp_kernel, self.bvec_use_grad, self.bvec_use_grad)
+            
+    #         if b_normlz_w_varK:
+    #             Kcov = Kern + np.diag(noise_vec / varK)
+    #         else:
+    #             Kcov = varK * Kern + np.diag(noise_vec)
+        
+    #         if calc_cond:
+    #             condK = np.linalg.cond(Kcov, p = self.condnum_norm)  
+                
+    #             if condK > self.cond_max_abs:
+    #                 calc_chofac = False
+    #         else:
+    #             condK = None
+        
+    #         time_chofac_start = time.time()
+        
+    #         if calc_chofac:
+    #             try:
+    #                 Kcov_chofac = cho_factor(Kcov)
+    #             except:
+    #                 Kcov_chofac = None
+                    
+    #                 eig_val = np.linalg.eigvalsh(Kcov)
+    #                 min_eig = np.min(eig_val)
+    #                 cond    = np.max(eig_val) / min_eig
+                    
+    #                 log10th = np.log10(theta)
+    #                 print(f'Failed Cho factorization of Kcov, cond = {cond:.2e}, eig min = {min_eig:.2e}, log10(th) = {log10th}')
+    #         else:
+    #             Kcov_chofac = None
+                
+    #     time_chofac = time.time() - time_chofac_start
+    #     self._time_chofac += time_chofac
+        
+    #     return Kern, Kcor, Kcov, Kcov_chofac, condK, etaK, idx_etaK_argmax
+
+    # def make_vec_var_noise(self, hp_vals, nugget, varK):
+    #     '''
+    #     Parameters
+    #     ----------
+    #     hp_vals : HparaOptzVal from GpHpara
+    #         Class that contains all of the hyperparameters
+    #     nugget : float
+    #         Minimum value to be added to the diagonal of the kernel matrix to 
+    #         regularize it.
+    #     varK : float
+    #         Hyperparameter.
+
+    #     Returns
+    #     -------
+    #     var_noise : 1D numpy array
+    #         Array of noise values.
+    #     '''
+        
+    #     ''' Preliminary '''
+        
+    #     assert not np.isnan(varK), f'We have varK = {varK}'
+        
+    #     theta = hp_vals.theta 
+    #     std_fval, _, std_fgrad = self.get_scl_eval_data(theta)[1:]
+        
+    #     if self.use_grad == False:
+    #         var_noise = np.maximum(std_fval, nugget * varK)
+    #     else:
+    #         var_noise = np.zeros(self.n_data)
+            
+    #         ''' Make noise vector '''
+            
+    #         if self.known_eps_fval:
+    #             assert hp_vals.var_fval is None
+    #             assert not np.any(np.isnan(std_fval)), f'There are nan values: std_fval = {std_fval}'
+    #             var_noise[:self.n_eval] = std_fval**2
+    #         else:
+    #             var_noise[:self.n_eval] = hp_vals.var_fval
+            
+    #         if self.known_eps_fgrad:
+    #             assert hp_vals.var_fgrad is None
+    #             assert not np.any(np.isnan(std_fgrad)), f'There are nan values: std_fgrad = {std_fgrad}'
+    #             var_noise[self.n_eval:] = (std_fgrad**2).reshape(std_fgrad.size, order='f')
+    #         else:
+    #             var_noise[self.n_eval:] = hp_vals.var_fgrad
+    
+    #         ''' Make nugget vector '''
+            
+    #         if self.wellcond_mtd == 'precon':
+    #             pvec       = self.calc_Kern_precon(self.n_eval, self.n_grad, theta, b_return_vec = True)[0]
+    #             nugget_vec = pvec**2 * nugget * varK
+    #         else:
+    #             nugget_vec = np.full(self.n_data, nugget * varK)
+            
+    #         # Scale and set minimum noise with the nugget
+    #         var_noise = np.maximum(var_noise, nugget_vec)
+            
+    #         if np.any(np.isnan(var_noise)):
+    #             print(f'There are nan in var_noise. varK = {varK:.1e}, theta = {theta}')
+    #             print(f'var_noise = \n{var_noise}')
+        
+    #     return var_noise
