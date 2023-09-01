@@ -120,8 +120,8 @@ dist_min    = np.nanmin(dist_x_eval + np.diag(np.full(n_eval, np.nan)))
 print(f'dim = {dim}, n_eval = {n_eval}, nugget = {nugget:.2e}, dist_min = {dist_min:.2e}')
 
 def calc_n_plot(use_grad, kernel_type, wellcond_mtd, 
-                use_noisy_precon = True, use_const_eta   = False, 
-                std_fval_scalar  = 0,    std_grad_scalar = 0):
+                use_const_eta   = False, 
+                std_fval_scalar = 0,    std_grad_scalar = 0):
     
     std_fval_vec  = std_fval_scalar * np.ones(obj_eval.shape)
     std_grad_vec  = std_grad_scalar * np.ones(grad_eval.shape)
@@ -135,14 +135,8 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
     else:
         str_noise = ''
     
-    if use_grad:
-        if wellcond_mtd == 'precon':
-            if use_noisy_precon:
-                str_wellcond_mtd = 'precon2'
-            else:
-                str_wellcond_mtd = 'precon1'
-        else:
-            str_wellcond_mtd = wellcond_mtd
+    if use_grad:        
+        str_wellcond_mtd = wellcond_mtd
         
         if std_grad_scalar > 0:
             str_noise += f'StdGrad_{std_grad_scalar:.1e}'.replace('.', 'p')
@@ -153,7 +147,6 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
         assert wellcond_mtd is None, 'If use_grad is False, then wellcond_mtd must be None'
         
     GP = GaussianProcess(dim, use_grad, kernel_type, wellcond_mtd)
-    GP.use_noisy_precon = use_noisy_precon
     GP.use_const_eta = False
     
     if use_grad:
@@ -341,7 +334,6 @@ if False:
     use_grad         = False
     kernel_type_vec  = ['SqExp', 'Ma5f2', 'RatQu']
     wellcond_mtd     = None
-    use_noisy_precon = True
     use_const_eta    = True
     std_fval_scalar  = 0
     std_grad_scalar  = 0
@@ -351,44 +343,41 @@ if False:
 
 ''' Gaussian kernel with gradients '''
 
-# Noise free
+# Noise-free
 if False:
     use_grad         = True
     kernel_type      = 'SqExp'
     wellcond_mtd     = 'precon'
-    use_noisy_precon = True
     use_const_eta    = True
     std_fval_scalar  = 0
     std_grad_scalar  = 0
     
-    calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_noisy_precon, use_const_eta, 
+    calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
                 std_fval_scalar, std_grad_scalar)
 
-# Noise free without second precon
+# Noise-free without second precon
 if False:
     use_grad         = True
     kernel_type      = 'SqExp'
     wellcond_mtd     = 'precon'
-    use_noisy_precon = False
     use_const_eta    = True
     std_fval_scalar  = 0
     std_grad_scalar  = 0
     
-    calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_noisy_precon, use_const_eta, 
+    calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
                 std_fval_scalar, std_grad_scalar)
 
-# Noisy
-if False:
-    use_grad         = True
-    kernel_type      = 'SqExp'
-    wellcond_mtd     = 'precon'
-    use_noisy_precon = True
-    use_const_eta    = True
-    std_fval_scalar  = 1e-6
-    std_grad_scalar  = 1e-1
+# # Noisy
+# if False:
+#     use_grad         = True
+#     kernel_type      = 'SqExp'
+#     wellcond_mtd     = 'precon'
+#     use_const_eta    = True
+#     std_fval_scalar  = 1e-6
+#     std_grad_scalar  = 1e-1
     
-    calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_noisy_precon, use_const_eta, 
-                std_fval_scalar, std_grad_scalar)
+#     calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
+#                 std_fval_scalar, std_grad_scalar)
     
 ''' Non-Gaussian kernels with gradients '''
 
@@ -397,28 +386,39 @@ if False:
     use_grad         = True
     kernel_type_vec  = ['Ma5f2', 'RatQu']
     wellcond_mtd     = None
-    use_noisy_precon = True
     use_const_eta    = False
     std_fval_scalar  = 0
     std_grad_scalar  = 0
     
-    calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_noisy_precon, use_const_eta, 
+    calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
                 std_fval_scalar, std_grad_scalar)
 
 # Precon method with variable nugget
-if True:
+if False:
     use_grad         = True
     kernel_type_vec  = ['Ma5f2', 'RatQu']
     wellcond_mtd     = 'precon'
-    use_noisy_precon = True
     use_const_eta    = False
     std_fval_scalar  = 0
     std_grad_scalar  = 0
     
     for kernel_type in kernel_type_vec:
-        calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_noisy_precon, use_const_eta, 
+        calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
                     std_fval_scalar, std_grad_scalar)
 
+''' All kernels, noisy-case '''
+
+if True:
+    use_grad         = True
+    kernel_type_vec  = ['SqExp', 'Ma5f2', 'RatQu']
+    wellcond_mtd     = 'precon'
+    use_const_eta    = False
+    std_fval_scalar  = 1e-6
+    std_grad_scalar  = 1e-1
+    
+    for kernel_type in kernel_type_vec:
+        calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
+                    std_fval_scalar, std_grad_scalar)
 
 # # Cases with gradients 
 # use_grad         = True
@@ -436,16 +436,3 @@ if True:
 
 # for kernel_type in kernel_type_vec:
 #     calc_n_plot(use_grad,kernel_type, wellcond_mtd)
-
-# Cases with and without the second preconditioning
-# use_grad        = True
-# kernel_type     = 'SqExp'
-# wellcond_mtd    = 'precon'
-# std_fval_scalar = 1e-6
-# std_grad_scalar = 0.1
-
-# use_noisy_precon = True
-# calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_noisy_precon, use_const_eta, std_fval_scalar, std_grad_scalar)
-
-# use_noisy_precon = False
-# calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_noisy_precon, use_const_eta, std_fval_scalar, std_grad_scalar)

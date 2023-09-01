@@ -149,6 +149,7 @@ if vec_idx_lkd_max.size == 0:
     vec_idx_lkd_max = np.array([int(n_theta/2)])
 
 vec_idx_lkd_max = np.array([0, np.argmax(ln_lkd_scl), -1])
+# vec_idx_lkd_max = np.array([62, 62, 62])
 
 n_max = vec_idx_lkd_max.size
     
@@ -168,6 +169,7 @@ for i in range(n_max):
     ax1.plot(gamma_vec[idx], ln_lkd_scl[idx], list_color_mu[i] + 'o', markersize = markersize)
 
 ax1.grid(True)
+plt.tight_layout()
 
 if save_fig:
     if use_grad:
@@ -228,6 +230,7 @@ for i in range(n_max):
         ax.text(xmax - 0.05, surr_ylim[1] - 0.7, rf'$\gamma = {gamma:.1f}$', fontsize = fs_text, ha = 'right')
     
     ax.set_ylim(surr_ylim)
+    plt.tight_layout()
     
     if save_fig:
         full_path = path.join(folder_all, base_str_surr_plt + f'_{gamma:.1e}.png')

@@ -196,7 +196,7 @@ def calc_fd_lkd(GP_in, wellcond_mtd, kernel_type, hp_vals_in, idx_in, text2print
     
     if calc_cond:
         np.testing.assert_allclose(cond_der[idx_in], cond_fd, rtol = rtol, atol = atol) 
- 
+        
 
 class TestGrad(unittest.TestCase):
     
@@ -301,4 +301,3 @@ class TestGrad(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
