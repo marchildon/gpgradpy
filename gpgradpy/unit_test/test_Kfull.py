@@ -19,7 +19,7 @@ np.set_printoptions(precision=2)
 list_kernel_types  = ['SqExp', 'Ma5f2', 'RatQu']
 list_wellcond_mtds = [None, 'req_vmin', 'precon']
 
-# list_kernel_types  = ['Ma5f2']
+# list_kernel_types  = ['SqExp']
 # list_wellcond_mtds = [None]
 
 x_eval      = np.array([[0,0], [1,1]], dtype=float)
