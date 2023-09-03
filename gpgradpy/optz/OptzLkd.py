@@ -327,8 +327,8 @@ class OptzLkd(CalcLkd):
         best_hp_vals = self.hp_vec2dataclass(self.hp_info_optz_lkd, best_hp)
         
         if self.b_has_noisy_data:
-            cond_val = self.calc_all_K_w_chofac(Rtensor, best_hp_vals, calc_chofac = False, calc_cond = True)[-1]
+            cond_val = self.calc_all_K_w_chofac(Rtensor, best_hp_vals, calc_chofac = False, calc_cond = True)[4]
         else:
-            cond_val = self.calc_Kern_w_chofac(Rtensor, best_hp_vals, calc_chofac = False, calc_cond = True)[-1]
+            cond_val = self.calc_Kern_w_chofac(Rtensor, best_hp_vals, calc_chofac = False, calc_cond = True)[4]
         
         return best_hp, cond_val, surr_optz_info

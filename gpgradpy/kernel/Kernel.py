@@ -559,7 +559,7 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
     #     assert not np.isnan(varK), f'We have varK = {varK}'
         
     #     theta = hp_vals.theta 
-    #     std_fval, _, std_fgrad = self.get_scl_eval_data(theta)[1:]
+    #     std_fval, _, std_fgrad = self.get_scl_eval_data()[1:]
         
     #     if self.use_grad == False:
     #         var_noise = np.maximum(std_fval, nugget * varK)

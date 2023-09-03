@@ -144,7 +144,8 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
         if self.n_eval <= self.n_eval_hp_const:
             hp_vals        = self.get_init_hp_vals()
             surr_optz_info = None
-            cond_val       = np.nan
+            Rtensor        = self.get_scl_x_w_dist()[1]
+            cond_val       = self.calc_all_K_w_chofac(Rtensor, hp_vals, calc_chofac = False, calc_cond = True)[4]
             time_hp_optz   = time_chofac = time_pick_hp0 = 0
         else:
             self._time_chofac = 0
@@ -204,7 +205,7 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
     def get_init_hp_vals(self):
         
         theta = self.hp_theta_init * np.ones(self.dim)
-        fval_scl, std_fval_scl, fgrad_scl, std_fgrad_scl = self.get_scl_eval_data(theta)
+        fval_scl, std_fval_scl, fgrad_scl, std_fgrad_scl = self.get_scl_eval_data()
         
         beta = np.zeros(self.n_beta_coeff)
         
