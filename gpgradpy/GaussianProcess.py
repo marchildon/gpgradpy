@@ -224,7 +224,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
                 n_grad = n_eval 
             else:
                 n_grad = np.sum(bvec_use_grad)
-                assert self.b_use_data_scl == False, 'The class Rescaling is not setup for the case when not all gradients are used'
+                # assert self.b_use_data_scl == False, 'The class Rescaling is not setup for the case when not all gradients are used'
                 assert bvec_use_grad.size == n_eval, \
                     f'Length of bvec_use_grad is {bvec_use_grad.size} but it should be n_eval = {n_eval}'
                 assert grad.shape[0] == n_grad, \
