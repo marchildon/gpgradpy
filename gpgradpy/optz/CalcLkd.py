@@ -93,7 +93,7 @@ class calcLkdWoNoise:
     
     @staticmethod
     def calc_lkd_opt_varK(data_vec, mean_model_val, Kern_chofac,  
-                          mean_model_hp_grad = None, KernGrad_hp = None, varK_min = 1e-8):
+                          mean_model_hp_grad = None, KernGrad_hp = None, varK_min = 1e-32):
         
         n_data      = data_vec.size
         denominator = n_data # For unbiased varK we would require denominator(n_data - self.beta_var_npara)
