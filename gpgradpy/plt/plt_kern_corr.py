@@ -96,7 +96,7 @@ sq_exp_corr_gwg_2d = calc_sq_exp_2d_corr(Xrvec, Yrvec)
 def make_1d_plot():
     
     fig, ax = plt.subplots(figsize=(5, 4))
-    ax.set_xlabel(r'$\tilde{r} = \gamma(x - y)$', fontsize = label_fs)
+    ax.set_xlabel(r'$\dot{r} = \gamma(x - y)$', fontsize = label_fs)
     ax.set_ylabel(r'Correlation', size = label_fs)
     ax.tick_params(axis='both', labelsize=tick_fs)
     
@@ -132,8 +132,8 @@ def plt_2d_corr(corr_gwg_2d, str_kern):
     ax2.tick_params(axis='both', which='major', labelsize=tick_fs)
     ax2.grid(True)
     
-    ax2.set_xlabel(r'$\tilde{r}_1 = \gamma_1(x_1 - y_1)$', size=label_fs)
-    ax2.set_ylabel(r'$\tilde{r}_2 = \gamma_2(x_2 - y_2)$', size=label_fs)
+    ax2.set_xlabel(r'$\dot{r}_1 = \gamma_1(x_1 - y_1)$', size=label_fs)
+    ax2.set_ylabel(r'$\dot{r}_2 = \gamma_2(x_2 - y_2)$', size=label_fs)
     
     cs = ax2.contourf(Xrvec, Yrvec, corr_gwg_2d, levels = levels)
     fig2.colorbar(cs)
