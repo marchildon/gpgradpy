@@ -80,8 +80,7 @@ def calc_grad(xy, a = 10):
 ''' Preliminary calculations '''
 
 varK = 0.1
-
-dim = 2 # This function is must use dim = 2
+dim  = 2 # This function is must use dim = 2
 
 if path.exists(folder_all) is False:
     makedirs(folder_all)
@@ -147,7 +146,7 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
         assert wellcond_mtd is None, 'If use_grad is False, then wellcond_mtd must be None'
         
     GP = GaussianProcess(dim, use_grad, kernel_type, wellcond_mtd)
-    GP.use_const_eta = False
+    GP.use_const_eta = use_const_eta
     
     if use_grad:
         GP.set_data(x_eval, obj_eval, std_fval_vec, grad_eval, std_grad_vec)
