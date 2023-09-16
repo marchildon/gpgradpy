@@ -9,8 +9,8 @@ Created on Fri Dec  2 13:52:38 2022
 import unittest
 import numpy as np
 
-from gpgradpy.base import CommonFun
-from gpgradpy import GaussianProcess
+from gpgradpy.src.base import CommonFun
+from gpgradpy.src import GaussianProcess
 
 ''' Set parameters '''
 

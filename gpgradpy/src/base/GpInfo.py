@@ -6,7 +6,6 @@ Created on Sun Jun  6 09:48:36 2021
 @author: andremarchildon
 """
 
-# import os
 import numpy as np
 from tabulate import tabulate
 

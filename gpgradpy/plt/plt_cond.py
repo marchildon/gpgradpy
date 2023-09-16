@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial import distance
 from smt.sampling_methods import LHS
 
-from gpgradpy import GaussianProcess  
+from gpgradpy.src import GaussianProcess  
  
 ''' Set options '''
 

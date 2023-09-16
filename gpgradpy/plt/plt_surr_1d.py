@@ -12,7 +12,7 @@ from scipy.stats import norm
 import matplotlib.pyplot as plt
 
 from SurrPlt import SurrPlt
-from gpgradpy import GaussianProcess  
+from gpgradpy.src import GaussianProcess  
     
 ''' Set options '''
 

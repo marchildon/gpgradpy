@@ -9,7 +9,7 @@ Created on Mon Jan  9 09:19:56 2023
 import unittest
 import numpy as np
 
-from gpgradpy import GaussianProcess
+from gpgradpy.src import GaussianProcess
 
 '''  
 Check the gradient for the precondition matrix with respect to theta

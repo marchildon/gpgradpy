@@ -9,7 +9,7 @@ Created on Tue Nov  1 15:12:40 2022
 import unittest
 import numpy as np
 
-from gpgradpy import GaussianProcess
+from gpgradpy.src import GaussianProcess
 
 ''' Set parameters '''
 
