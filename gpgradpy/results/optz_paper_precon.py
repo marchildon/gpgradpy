@@ -19,7 +19,7 @@ Ill-Conditioning of Gradient- Enhanced Covariance Matrices for Gaussian Processe
 markersize  = 3
 color_vec   = ['m', 'b', 'g']
 
-b_plt_merit = False
+b_plt_merit = True
 b_plt_opt   = True
 b_plt_fsb   = False
 
@@ -57,7 +57,8 @@ def plot_obj_opt(case_folder, file_vec, label_vec, basefigname, n_iter_max = Non
 
 # Set case to plot
 base_folder    = 'data_paper_precon'
-list_test_case = ['Rosen_a10_d2', 'Rosen_a10_d5', 'Rosen_a10_d10', 'Rosen_a10_d15']
+list_test_case = ['Rosen_a10_d5', 'Rosen_a10_d10', 'Rosen_a10_d20']
+# list_test_case = ['Rosen_a10_d2', 'Rosen_a10_d5', 'Rosen_a10_d10', 'Rosen_a10_d15']
 
 ''' Indicate files and other case specific parameters '''
 
@@ -74,17 +75,17 @@ for i_case in range(n_cases):
     case_folder   = path.join(base_folder, str_test_case)
     basefigname   = str_test_case
 
-    if str_test_case == 'Rosen_a10_d2':
-        n_iter_max  = 160
-        plot_obj_opt(case_folder, file_vec, label_vec, basefigname, n_iter_max, legend_loc = 'upper right')
-    elif str_test_case == 'Rosen_a10_d5':
+    if str_test_case == 'Rosen_a10_d5':
         n_iter_max  = 160
         plot_obj_opt(case_folder, file_vec, label_vec, basefigname, n_iter_max, legend_loc = 'upper right')
     elif str_test_case == 'Rosen_a10_d10':
         n_iter_max  = 160
-        plot_obj_opt(case_folder, file_vec, label_vec, basefigname, n_iter_max, legend_loc = 'upper right')
-    elif str_test_case == 'Rosen_a10_d15':
+        plot_obj_opt(case_folder, file_vec, label_vec, basefigname, n_iter_max, legend_loc = 'lower left')
+    elif str_test_case == 'Rosen_a10_d20':
         n_iter_max  = 160
         plot_obj_opt(case_folder, file_vec, label_vec, basefigname, n_iter_max, legend_loc = 'lower left')
+    # elif str_test_case == 'Rosen_a10_d15':
+    #     n_iter_max  = 160
+    #     plot_obj_opt(case_folder, file_vec, label_vec, basefigname, n_iter_max, legend_loc = 'lower left')
     else:
         raise Exception(f'Unknown test case str_test_case = {str_test_case}')
