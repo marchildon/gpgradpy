@@ -20,11 +20,10 @@ n_eval      = 10
 cond_max    = 1e10 # Maximum condition number
 
 # Plotting options
-n_gamma     = 100
+n_gamma     = 200
 range_gamma = np.array([1e-4, 1e8])
 
 save_fig    = True
-plt_nugget  = False
 folder_all  = path.join('figures', '2D_cond')
 
 label_fs    = 12
@@ -38,6 +37,9 @@ lvl_lkd     = np.linspace(0, 1, 11)
 lvl_cond    = np.linspace(0, 12, 7)
 lvl_eta     = np.linspace(0, 1, 9)
 # lvl_eta     = np.linspace(1, 3, 9)
+
+plt_shrink = 0.8
+plt_aspect = 15
 
 ''' Define the function of interest '''
 
@@ -130,7 +132,7 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
     ''' Create the GP and evaluate the surrogate'''
     
     if std_fval_scalar > 0:
-        str_noise = f'StdObj_{std_fval_scalar:.1e}'.replace('.', 'p')
+        str_noise = f'_StdObj_{std_fval_scalar:.1e}'.replace('.', 'p')
     else:
         str_noise = ''
     
@@ -140,9 +142,9 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
         if std_grad_scalar > 0:
             str_noise += f'StdGrad_{std_grad_scalar:.1e}'.replace('.', 'p')
         
-        base_file_name = f'Kern_{kernel_type}_mtd_{str_wellcond_mtd}_grad_T_n{n_eval}_{str_noise}.png'
+        base_file_name = f'Kern_{kernel_type}_mtd_{str_wellcond_mtd}_grad_T_n{n_eval}{str_noise}.png'
     else:
-        base_file_name = f'Kern_{kernel_type}_grad_F_n{n_eval}_{str_noise}.png'
+        base_file_name = f'Kern_{kernel_type}_grad_F_n{n_eval}{str_noise}.png'
         assert wellcond_mtd is None, 'If use_grad is False, then wellcond_mtd must be None'
         
     GP = GaussianProcess(dim, use_grad, kernel_type, wellcond_mtd)
@@ -165,25 +167,12 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
     
     lkd_all     = np.full((n_gamma, n_gamma), np.nan)
     condK_all   = np.full((n_gamma, n_gamma), np.nan)
-    # etaK_all    = np.full((n_gamma, n_gamma), np.nan)
-    
-    eta_Gcircle_all = np.full((n_gamma, n_gamma), np.nan)
-    eta_eig_all     = np.full((n_gamma, n_gamma), np.nan)
     
     for i in range(n_gamma):
         for j in range(n_gamma):
             theta    = np.array([theta_vec[i], theta_vec[j]])
             hp_vals  = GP.make_hp_class(varK = varK, theta = theta, kernel = hp_kernel)
             lkd_info = GP.calc_lkd_all(hp_vals, calc_lkd = True, calc_cond = True, calc_grad = False)[0]
-            
-            if GP.Rtensor_init is not None:
-                Kcor    = GP.calc_all_K_w_chofac(GP.Rtensor_init, hp_vals)[1]
-                eigall  = np.linalg.eigvalsh(Kcor)
-                
-                eig_max_est          = np.max(np.sum(np.abs(Kcor), axis=1))
-                eta_Gcircle_all[i,j] = eig_max_est / (cond_max - 1)
-                
-                eta_eig_all[i,j]     = np.max((0, (np.max(eigall) - np.min(eigall) * cond_max) / (cond_max - 1)))
             
             lkd_all[i,j]   = lkd_info.ln_lkd
             condK_all[i,j] = lkd_info.cond
@@ -240,7 +229,7 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
     if loc_max_lkd is not None:
         ax0.plot(loc_max_lkd[0], loc_max_lkd[1], 'k*', markersize = markersize)
             
-    fig0.colorbar(cs, pad = 0.08)
+    fig0.colorbar(cs, pad = 0.08, shrink = plt_shrink, aspect = plt_aspect)
     
     fig0.tight_layout()
     plt.show() 
@@ -248,7 +237,7 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
     if save_fig:
         file_name = 'Cond_' + base_file_name
         full_path = path.join(folder_all, file_name)
-        fig0.savefig(full_path, dpi = 800, format='png')
+        fig0.savefig(full_path, dpi = 800, format='png', bbox_inches='tight')
     
     ''' Plot the likelihood number '''
     
@@ -262,72 +251,27 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
     if np.max(log10_condK_all) > np.log10(cond_max):
         ax2.contour(Xmat_para, Ymat_para, scl_lkd_all, levels=[np.log10(cond_max)])
     
-    fig2.colorbar(cs, pad = 0.08)
+    fig2.colorbar(cs, pad = 0.08, shrink = plt_shrink, aspect = plt_aspect)
     
+    fig2.tight_layout()
     plt.show() 
     
     if save_fig:
         file_name = 'Lkd_' + base_file_name
         full_path = path.join(folder_all, file_name)
-        fig2.savefig(full_path, dpi = 800, format='png')
+        fig2.savefig(full_path, dpi = 800, format='png', bbox_inches='tight')
         
-    ''' Plot the nugget fraction etaK(X) / etaK_const '''
-    
-    if wellcond_mtd == 'precon':
-        # eta_Gcircle_scl_all = GP._etaK / eta_Gcircle_all
-        # eta_eig_scl_all = eta_Gcircle_all / eta_eig_all
-        
-        eta_Gcircle_scl_all = eta_Gcircle_all / GP._etaK
-        eta_eig_scl_all     = eta_eig_all / GP._etaK
-        
-        eta_Gcircle_scl_at_lkdmax = eta_Gcircle_scl_all[idx_max_row, idx_max_col]
-        eta_eig_scl_at_lkdmax     = eta_eig_scl_all[idx_max_row, idx_max_col]
-        
-        print(f'eta_Gcircle_scl_at_lkdmax = {eta_Gcircle_scl_at_lkdmax:.3}')
-        print(f'eta_eig_scl_at_lkdmax     = {eta_eig_scl_at_lkdmax:.3}')
-        
-        if not plt_nugget:
-            return
-        
-        # Plot eta_Gcircle_scl_all
-        fig1, ax1 = setup_plot()
-        
-        cs = ax1.contourf(Xmat_para, Ymat_para, eta_Gcircle_scl_all, levels=lvl_eta, cmap=cmap_lkd)
-        
-        if loc_max_lkd is not None:
-            ax1.plot(loc_max_lkd[0], loc_max_lkd[1], 'k*', markersize = markersize)
-                
-        fig1.colorbar(cs, pad = 0.08)
-        
-        fig1.tight_layout()
-        plt.show() 
-        
-        if save_fig:
-            file_name = 'EtaGcircle_' + base_file_name
-            full_path = path.join(folder_all, file_name)
-            fig1.savefig(full_path, dpi = 800, format='png')
-            
-        # Plot eta_eig_scl_all
-        fig1, ax1 = setup_plot()
-        
-        cs = ax1.contourf(Xmat_para, Ymat_para, eta_eig_scl_all, levels=lvl_eta, cmap=cmap_lkd)
-        
-        if loc_max_lkd is not None:
-            ax1.plot(loc_max_lkd[0], loc_max_lkd[1], 'k*', markersize = markersize)
-                
-        fig1.colorbar(cs, pad = 0.08)
-        
-        fig1.tight_layout()
-        plt.show() 
-        
-        if save_fig:
-            file_name = 'EtaEig_' + base_file_name
-            full_path = path.join(folder_all, file_name)
-            fig1.savefig(full_path, dpi = 800, format='png')
-        
-    # return eta_Gcircle_scl_all, GP._etaK, etaK_all
-    
 ''' Grad-free, noise-free '''
+
+# use_grad         = False
+# kernel_type_vec  = ['SqExp']
+# wellcond_mtd     = None
+# use_const_eta    = True
+# std_fval_scalar  = 0
+# std_grad_scalar  = 0
+
+# for kernel_type in kernel_type_vec:
+#     calc_n_plot(use_grad,kernel_type, wellcond_mtd)
 
 if False:
     use_grad         = False
@@ -346,25 +290,14 @@ if False:
 if False:
     use_grad         = True
     kernel_type      = 'SqExp'
-    wellcond_mtd     = 'precon'
+    wellcond_mtd_vec = [None, 'req_vmin', 'precon']
     use_const_eta    = True
     std_fval_scalar  = 0
     std_grad_scalar  = 0
     
-    calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
-                std_fval_scalar, std_grad_scalar)
-
-# Noise-free without second precon
-if False:
-    use_grad         = True
-    kernel_type      = 'SqExp'
-    wellcond_mtd     = 'precon'
-    use_const_eta    = True
-    std_fval_scalar  = 0
-    std_grad_scalar  = 0
-    
-    calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
-                std_fval_scalar, std_grad_scalar)
+    for wellcond_mtd in wellcond_mtd_vec:
+        calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
+                    std_fval_scalar, std_grad_scalar)
 
 # # Noisy
 # if False:
@@ -380,32 +313,33 @@ if False:
     
 ''' Non-Gaussian kernels with gradients '''
 
-# Baseline method with constant nuggget
-if False:
-    use_grad         = True
-    kernel_type_vec  = ['Ma5f2', 'RatQu']
-    wellcond_mtd     = None
-    use_const_eta    = False
-    std_fval_scalar  = 0
-    std_grad_scalar  = 0
+# # Baseline method with constant nuggget
+# if False:
+#     use_grad         = True
+#     kernel_type_vec  = ['Ma5f2', 'RatQu']
+#     wellcond_mtd     = None
+#     use_const_eta    = False
+#     std_fval_scalar  = 0
+#     std_grad_scalar  = 0
     
-    calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
-                std_fval_scalar, std_grad_scalar)
+#     calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
+#                 std_fval_scalar, std_grad_scalar)
 
 # Precon method with variable nugget
 if False:
     use_grad         = True
     kernel_type_vec  = ['Ma5f2', 'RatQu']
-    wellcond_mtd     = 'precon'
+    wellcond_mtd_vec = ['precon', None]
     use_const_eta    = False
     std_fval_scalar  = 0
     std_grad_scalar  = 0
     
     for kernel_type in kernel_type_vec:
-        calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
-                    std_fval_scalar, std_grad_scalar)
+        for wellcond_mtd in wellcond_mtd_vec:
+            calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
+                        std_fval_scalar, std_grad_scalar)
 
-''' All kernels, noisy-case '''
+''' All kernels with grad, noisy-case '''
 
 if True:
     use_grad         = True
@@ -418,20 +352,3 @@ if True:
     for kernel_type in kernel_type_vec:
         calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
                     std_fval_scalar, std_grad_scalar)
-
-# # Cases with gradients 
-# use_grad         = True
-# wellcond_mtd_vec = [None, 'req_vmin', 'precon']
-# kernel_type_vec  = ['SqExp', 'Ma5f2', 'RatQu']
-
-# for kernel_type in kernel_type_vec:
-#     for wellcond_mtd in wellcond_mtd_vec:
-#             calc_n_plot(use_grad, kernel_type, wellcond_mtd)
-    
-# # Cases without gradients 
-# use_grad         = False
-# wellcond_mtd     = None
-# kernel_type_vec  = ['SqExp', 'Ma5f2', 'RatQu']
-
-# for kernel_type in kernel_type_vec:
-#     calc_n_plot(use_grad,kernel_type, wellcond_mtd)
