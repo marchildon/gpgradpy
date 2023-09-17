@@ -8,7 +8,7 @@ Created on Sat Jul 16 15:21:22 2022
 
 import numpy as np 
 
-from gpgradpy.base import CommonFun
+from gpgradpy.src.base import CommonFun
 
 '''
 The methods in this file are used to ensure the gradient-enhanced correlation 
