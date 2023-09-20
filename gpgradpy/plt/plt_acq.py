@@ -86,7 +86,7 @@ GP.hp_vals      = hp_vals_th_best
 
 GP.setup_eval_model() 
 
-(gp_mu_all, gp_sig_all) = GP.eval_model(x_exa, calc_grad = True)[0]
+gp_mu_all, gp_sig_all = GP.eval_model(x_exa, calc_grad = True)[:2]
 
 ''' Calc the acquisition function with model '''
 

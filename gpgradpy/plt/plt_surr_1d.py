@@ -108,7 +108,7 @@ def eval_model(GP, theta, hp_mu, varK):
     
     GP.hp_vals = hp_vals_th_best
     GP.setup_eval_model() 
-    gp_mu, gp_sig, gp_mu_grad, gp_sig_grad = GP.eval_model(x_exa)[:2]
+    gp_mu, gp_sig, gp_mu_grad, gp_sig_grad = GP.eval_model(x_exa)[:4]
     
     return gp_mu, gp_sig
 
@@ -199,7 +199,7 @@ for i in range(n_max):
     
     GP.setup_eval_model() 
     
-    (gp_mu_all[i,:], gp_sig_all[i,:]), (gp_mu_grad_all[i,:,:], gp_sig_grad_all[i,:,:]) = GP.eval_model(x_exa, calc_grad = True)[:2]
+    gp_mu_all[i,:], gp_sig_all[i,:], gp_mu_grad_all[i,:,:], gp_sig_grad_all[i,:,:] = GP.eval_model(x_exa, calc_grad = True)[:4]
 
 ''' Plot the model '''
 

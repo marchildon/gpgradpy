@@ -49,12 +49,49 @@ class GpEvalModel(GpMeanFun):
         self.KernEta_chofac     = KernEta_chofac
         self.invKernEta_fdiff   = linalg.cho_solve(KernEta_chofac, f_diff)
         
-    def eval_model(self, x2model_in, calc_grad = False, calc_hess = False):
+    def eval_model(self, x2model_in, calc_grad = False, calc_hess = False, squeeze_nx = False):
+        '''
+        Parameters
+        ----------
+        x2model_in : 2d numpy array of size [nx, dim], where nx is the number of points in the parameter space
+            Each row is where the surrogate will be evaluated
+        calc_grad : bool, optional
+            If True the grad of the surrogate is evaluated. The default is False.
+        calc_hess : bool, optional
+            If True the Hessian of the surrogate is evaluated. The default is False.
+        squeeze_nx : bool, optional
+            If True then nx must be 1 and the returned arrays have their 
+            first dimension collapsed. The default is False.
+
+        Returns
+        -------
+        mu : 1d numpy array of length nx (or float if squeeze_nx is True)
+            Mean of the surrogate evaluated at the rows of x2model_in.
+        sig : 1d numpy array of length nx (or float if squeeze_nx is True)
+            Standard deviation of the surrogate evaluated at the rows of x2model_in.
+        dmudx : 2d numpy array of size [nx, dim]
+            Gradient of the mean of the surrogate evaluated at the rows of x2model_in.
+        dsigdx : 2d numpy array of size [nx, dim]
+            Gradient of the standard deviation of the surrogate evaluated at the rows of x2model_in.
+        d2mudx2 : 3d numpy array of size [nx, dim, dim]
+            Hessian of the mean of the surrogate evaluated at the rows of x2model_in.
+        d2sigdx2 : 3d numpy array of size [nx, dim, dim]
+            Hessian of the standard deviation of the surrogate evaluated at the rows of x2model_in.
+        '''
         
-        '''
-        Evaluates the surrogate at x2model_in. Prior to this method being 
-        called, the method setup_eval_model() must have been called.
-        '''
+        ''' Check inputs '''
+        
+        if x2model_in.ndim == 1:
+            x2model = x2model_in[None,:]
+        elif x2model_in.ndim == 2:
+            x2model = x2model_in
+        else:
+            raise Exception(f'x2model_in should be a 2d array but it has shape {x2model_in.shape}')
+        
+        nx = x2model.shape[0]
+        
+        if squeeze_nx:
+            assert nx == 1, 'If squeeze_nx is True, then x_acq must only have one point'
         
         check_hp_vals = self.hp_vals == self._hp_vals_model_setup
         
@@ -73,9 +110,7 @@ class GpEvalModel(GpMeanFun):
         sigK = np.sqrt(self.hp_vals.varK)
         
         if self.b_use_data_scl:
-            x2model = self.DataScl.x_init_2_scl(x2model_in)
-        else:
-            x2model = x2model_in
+            x2model = self.DataScl.x_init_2_scl(x2model)
             
         x_eval_scl = self.get_scl_x_w_dist()[0]
         
@@ -135,10 +170,23 @@ class GpEvalModel(GpMeanFun):
         else:
             d2mudx2  = d2sigdx2 = None
         
-        (mu_init, sig_init, dmudx_init, dsigdx_init, d2mudx2_init, d2sigdx2_init) \
-            = self.data_scl_2_init(mu, sig, dmudx, dsigdx, d2mudx2, d2sigdx2)
+        if self.b_use_data_scl:
+            (mu, sig, dmudx, dsigdx, d2mudx2, d2sigdx2) \
+                = self.data_scl_2_init(mu, sig, dmudx, dsigdx, d2mudx2, d2sigdx2)
         
-        return (mu_init, sig_init), (dmudx_init, dsigdx_init), (d2mudx2_init, d2sigdx2_init)
+        if squeeze_nx:
+            mu  = mu[0]
+            sig = sig[0]
+            
+            if calc_grad:
+                dmudx  = dmudx[0,:]
+                dsigdx = dsigdx[0,:]
+                
+            if calc_hess:
+                d2mudx2  = d2mudx2[0,:,:]
+                d2sigdx2 = d2sigdx2[0,:,:]
+                
+        return mu, sig, dmudx, dsigdx, d2mudx2, d2sigdx2
 
     def calc_dmudx(self, dKxy_dx):
         

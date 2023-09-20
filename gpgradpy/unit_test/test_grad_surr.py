@@ -130,7 +130,7 @@ def make_GP(wellcond_mtd, kernel_type):
 
 def eval_GP(GP, x2test):
 
-    (mu_cent, sig_cent), (dmu_dx_cent, dsig_dx_cent), (d2mu_dx2, d2sig_dx2) \
+    mu_cent, sig_cent, dmu_dx_cent, dsig_dx_cent, d2mu_dx2, d2sig_dx2 \
         = GP.eval_model(x2test, calc_grad=True, calc_hess=calc_hess)
     
     dmu_dx_cent  = dmu_dx_cent[0,:]
@@ -149,25 +149,25 @@ def eval_GP(GP, x2test):
             x_model_pp       = x2test * 1.0
             x_model_pp[0,i] += eps
             x_model_pp[0,j] += eps
-            (mu_pp, sig_pp)  = GP.eval_model(x_model_pp)[0]
+            mu_pp, sig_pp    = GP.eval_model(x_model_pp)[:2]
             
             # Evaluate at +-
             x_model_pm       = x2test * 1.0
             x_model_pm[0,i] += eps
             x_model_pm[0,j] -= eps
-            (mu_pm, sig_pm)  = GP.eval_model(x_model_pm)[0]
+            mu_pm, sig_pm    = GP.eval_model(x_model_pm)[:2]
             
             # Evaluate at -+
             x_model_mp       = x2test * 1.0
             x_model_mp[0,i] -= eps
             x_model_mp[0,j] += eps
-            (mu_mp, sig_mp)  = GP.eval_model(x_model_mp)[0]
+            mu_mp, sig_mp    = GP.eval_model(x_model_mp)[:2]
             
             # Evaluate at --
             x_model_mm       = x2test * 1.0
             x_model_mm[0,i] -= eps
             x_model_mm[0,j] -= eps
-            (mu_mm, sig_mm)  = GP.eval_model(x_model_mm)[0]
+            mu_mm, sig_mm    = GP.eval_model(x_model_mm)[:2]
             
             fd_d2mu_dx2[i,j]  = (mu_pp  - mu_pm  - mu_mp  + mu_mm) / (4 * eps**2)
             fd_d2mu_dx2[j,i]  = fd_d2mu_dx2[i,j]
@@ -189,7 +189,7 @@ class TestGrad(unittest.TestCase):
             for kernel_type in kernel_type_vec:
                 GP = make_GP(wellcond_mtd, kernel_type)
                 
-                (dmu_dx, dsig_dx) = GP.eval_model(x2test, calc_grad=True, calc_hess=False)[1]
+                dmu_dx, dsig_dx = GP.eval_model(x2test, calc_grad=True, calc_hess=False)[2:4]
                 dmu_dx  = dmu_dx[0,:]
                 dsig_dx = dsig_dx[0,:]
                 
@@ -219,7 +219,7 @@ class TestGrad(unittest.TestCase):
             for kernel_type in kernel_type_vec:
                 GP = make_GP(wellcond_mtd, kernel_type)
                 
-                (d2mu_dx2, d2sig_dx2) = GP.eval_model(x2test, calc_grad=True, calc_hess=True)[2]
+                d2mu_dx2, d2sig_dx2 = GP.eval_model(x2test, calc_grad=True, calc_hess=True)[4:]
                 d2mu_dx2  = d2mu_dx2[0,:,:]
                 d2sig_dx2 = d2sig_dx2[0,:,:]
                 
