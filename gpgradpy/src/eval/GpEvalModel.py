@@ -188,6 +188,125 @@ class GpEvalModel(GpMeanFun):
                 
         return mu, sig, dmudx, dsigdx, d2mudx2, d2sigdx2
 
+    def eval_model_var(self, x2model_in, calc_grad = False, calc_hess = False, squeeze_nx = False):
+        '''
+        Parameters
+        ----------
+        x2model_in : 2d numpy array of size [nx, dim], where nx is the number of points in the parameter space
+            Each row is where the surrogate will be evaluated
+        calc_grad : bool, optional
+            If True the grad of the surrogate is evaluated. The default is False.
+        calc_hess : bool, optional
+            If True the Hessian of the surrogate is evaluated. The default is False.
+        squeeze_nx : bool, optional
+            If True then nx must be 1 and the returned arrays have their 
+            first dimension collapsed. The default is False.
+
+        Returns
+        -------
+        sig2 : 1d numpy array of length nx (or float if squeeze_nx is True)
+            Standard deviation of the surrogate evaluated at the rows of x2model_in.
+        dsig2dx : 2d numpy array of size [nx, dim]
+            Gradient of the standard deviation of the surrogate evaluated at the rows of x2model_in.
+        d2sig2dx2 : 3d numpy array of size [nx, dim, dim]
+            Hessian of the standard deviation of the surrogate evaluated at the rows of x2model_in.
+        '''
+        
+        ''' Check inputs '''
+        
+        if x2model_in.ndim == 1:
+            x2model = x2model_in[None,:]
+        elif x2model_in.ndim == 2:
+            x2model = x2model_in
+        else:
+            raise Exception(f'x2model_in should be a 2d array but it has shape {x2model_in.shape}')
+        
+        nx = x2model.shape[0]
+        
+        if squeeze_nx:
+            assert nx == 1, 'If squeeze_nx is True, then x_acq must only have one point'
+        
+        check_hp_vals = self.hp_vals == self._hp_vals_model_setup
+        
+        if check_hp_vals is False:
+            print('hp_vals has changed since setup_eval_model() was called')
+            print(f'hp_vals_model_setup = \n{self._hp_vals_model_setup}')
+            print(f'hp_vals = \n{self.hp_vals}')
+            raise Exception('Cannot change hp_vals between calling setup_eval_model() and eval_model()')
+
+        theta     = self.hp_vals.theta 
+        hp_kernel = self.hp_vals.kernel
+        hp_beta   = self.hp_vals.beta
+
+        '''Preliminaries '''
+        
+        varK = self.hp_vals.varK
+        
+        if self.b_use_data_scl:
+            # x2model = self.DataScl.x_init_2_scl(x2model)
+            raise Exception('The method eval_model_var() is not setup for cases where data must be rescaled')
+            
+        x_eval_scl = self.get_scl_x_w_dist()[0]
+        
+        if calc_hess: 
+            assert calc_grad, 'To return the hessian calc_grad must also be set to True'
+
+        ny      = self.n_eval
+        nx      = x2model.shape[0]
+        one_nx  = np.ones(nx)
+
+        Rtensor = self.calc_Rtensor(x_eval_scl, x2model, 1)
+        if self.use_grad or calc_grad:
+            Kgrad_yx = self.calc_KernGrad(Rtensor, theta, hp_kernel, 
+                                          bvec_use_grad1 = self.bvec_use_grad)
+            
+            if self.use_grad:
+                Kyx      = Kgrad_yx[:, :nx]
+                dKxy_dx  = Kgrad_yx[:, nx:].T
+            else:
+                Kyx       = Kgrad_yx[:ny, :nx]
+                dKyx_dx   = Kgrad_yx[:ny, nx:]
+                dKxy_dx   = dKyx_dx.T
+        else:
+            Kyx = self.calc_KernBase(Rtensor, theta, hp_kernel)
+        
+        Kxy = Kyx.T
+        
+        if calc_hess:
+            Rtensor   = self.calc_Rtensor(x2model, x_eval_scl, 1)
+            d2Kxy_dx2 = self.calc_Kern_hess_x(Rtensor, theta, hp_kernel) # * sigK
+            
+        Kxy_invKernEta = linalg.cho_solve(self.KernEta_chofac, Kyx).T
+
+        ''' Solve for the mean and std of the model '''
+        
+        base_model_val, base_model_grad, base_model_hess \
+            = self.eval_mean_fun(x2model, hp_beta, 
+                                 calc_grad = calc_grad, calc_hess = calc_hess)
+        
+        sig2 = varK * (one_nx - np.diag(Kxy @ Kxy_invKernEta.T))
+        assert np.min(sig2) >= 0, f'The variance of the surr should be non-negative but min(sig2) = {np.min(sig2)}'
+
+        if calc_grad:
+            dsig2dx = self.calc_dsig2dx(sig2, Kxy_invKernEta, dKxy_dx, varK)
+        else:
+            dsig2dx = None
+            
+        if calc_hess:
+            raise Exception('Must add method to calculate d2sig2dx2')
+        else:
+            d2sig2dx2 = None
+        
+        if self.b_use_data_scl:
+            raise Exception('The method eval_model_var() is not setup for cases where data must be rescaled')
+        
+        if squeeze_nx:
+            sig2 = sig2[0]
+            if calc_grad: dsig2dx   = dsig2dx[0,:]
+            if calc_hess: d2sig2dx2 = d2sig2dx2[0,:,:]
+                
+        return sig2, dsig2dx, d2sig2dx2
+
     def calc_dmudx(self, dKxy_dx):
         
         nx        = int(dKxy_dx.shape[0] / (self.dim))
@@ -195,7 +314,19 @@ class GpEvalModel(GpMeanFun):
         dmudx     = np.reshape(dmudx_vec, [nx, self.dim], order='f')
         
         return dmudx
-        
+    
+    def calc_dsig2dx(self, sig, Kxy_invKernEta, dKxy_dx, varK):
+            
+            # Preliminaries
+            nx      = int(dKxy_dx.shape[0] / (self.dim))
+            one_d   = np.ones((self.dim, 1))
+            one_ny  = np.ones(self.invKernEta_fdiff.size)
+            
+            dsig2dx = -2*np.dot((dKxy_dx * np.kron(one_d, Kxy_invKernEta)), one_ny) * varK
+            dsig2dx = dsig2dx.reshape((nx, self.dim), order='f')
+    
+            return dsig2dx
+    
     def calc_dsigdx(self, sig, Kxy_invKernEta, dKxy_dx, sigK):
             
             # Preliminaries
