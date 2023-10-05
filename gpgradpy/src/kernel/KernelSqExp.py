@@ -15,7 +15,7 @@ class KernelSqExpBase:
 
     @staticmethod
     @jit(nopython=True)
-    def sq_exp_calc_KernBase(Rtensor, theta, hp_kernel):
+    def sq_exp_calc_KernBase(Rtensor, theta, hp_kernel, *args):
         '''
         Parameters
         ----------
@@ -46,7 +46,7 @@ class KernelSqExpBase:
         return KernBase
 
     @staticmethod
-    def sq_exp_calc_KernBase_hess_x(Rtensor, theta, hp_kernel):
+    def sq_exp_calc_KernBase_hess_x(Rtensor, theta, hp_kernel, *args):
         '''
         Parameters
         ----------
@@ -64,7 +64,7 @@ class KernelSqExpBase:
     
     @staticmethod
     @jit(nopython=True)
-    def sq_exp_calc_KernBase_hess_x_jit(Rtensor, theta, hp_kernel, KernBase):
+    def sq_exp_calc_KernBase_hess_x_jit(Rtensor, theta, hp_kernel, KernBase, *args):
         '''
         See sq_exp_calc_KernBase_hess_x() for documentation
         '''
@@ -89,7 +89,7 @@ class KernelSqExpBase:
         
     @staticmethod
     @jit(nopython=True)
-    def sq_exp_calc_KernBase_grad_th(Rtensor, theta, hp_kernel):  
+    def sq_exp_calc_KernBase_grad_th(Rtensor, theta, hp_kernel, *args):  
         '''
         Parameters
         ----------
@@ -265,7 +265,7 @@ class KernelSqExpGrad:
         assert n1 == n2, 'Incompatible shapes'
 
         KernBase         = KernGrad[:n1, :n1]
-        Rtensor_sq      = Rtensor**2
+        Rtensor_sq       = Rtensor**2
         KernGrad_grad_th = np.zeros((dim, n1*(dim+1), n1*(dim+1)))
         
         for d in range(dim):

@@ -15,7 +15,7 @@ class KernelMatern5f2Base:
 
     @staticmethod
     @jit(nopython=True)
-    def matern_5f2_calc_KernBase(Rtensor, theta, hp_kernel, nu_mat = None):
+    def matern_5f2_calc_KernBase(Rtensor, theta, hp_kernel, *args):
         '''
         Parameters
         ----------
@@ -39,13 +39,12 @@ class KernelMatern5f2Base:
 
         ''' Calculate the Kernel '''
         
-        if nu_mat is None:
-            nu_mat = np.zeros((n1, n2))
-            
-            for i in range(dim):
-                nu_mat += theta[i] * Rtensor[i,:,:]**2
-            
-            nu_mat = np.sqrt(nu_mat)
+        nu_mat = np.zeros((n1, n2))
+        
+        for i in range(dim):
+            nu_mat += theta[i] * Rtensor[i,:,:]**2
+        
+        nu_mat = np.sqrt(nu_mat)
         
         sqrt5    = np.sqrt(5)
         KernBase = (1 + sqrt5 * nu_mat + (5.0/3.0) * nu_mat**2) * np.exp(-sqrt5 * nu_mat)
@@ -54,7 +53,7 @@ class KernelMatern5f2Base:
 
     @staticmethod
     @jit(nopython=True)
-    def matern_5f2_calc_KernBase_hess_x(Rtensor, theta, hp_kernel):
+    def matern_5f2_calc_KernBase_hess_x(Rtensor, theta, hp_kernel, *args):
         '''
         Parameters
         ----------
@@ -96,7 +95,7 @@ class KernelMatern5f2Base:
 
     @staticmethod
     @jit(nopython=True)
-    def matern_5f2_calc_KernBase_grad_th(Rtensor, theta, hp_kernel):
+    def matern_5f2_calc_KernBase_grad_th(Rtensor, theta, hp_kernel, *args):
         '''
         Parameters
         ----------

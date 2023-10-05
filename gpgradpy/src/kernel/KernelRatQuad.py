@@ -15,7 +15,7 @@ class KernelRatQuadBase:
     
     @staticmethod
     @jit(nopython=True)
-    def rat_quad_calc_KernBase(Rtensor, theta, hp_kernel):
+    def rat_quad_calc_KernBase(Rtensor, theta, hp_kernel, *args):
         '''
         Parameters
         ----------
@@ -51,7 +51,7 @@ class KernelRatQuadBase:
 
     @staticmethod
     @jit(nopython=True)
-    def rat_quad_calc_KernBase_hess_x(Rtensor, theta, hp_kernel):
+    def rat_quad_calc_KernBase_hess_x(Rtensor, theta, hp_kernel, *args):
         '''
         Parameters
         ----------
@@ -97,7 +97,7 @@ class KernelRatQuadBase:
     
     @staticmethod
     @jit(nopython=True)
-    def rat_quad_calc_KernBase_grad_th(Rtensor, theta, hp_kernel):
+    def rat_quad_calc_KernBase_grad_th(Rtensor, theta, hp_kernel, *args):
         '''
         Parameters
         ----------
@@ -130,7 +130,7 @@ class KernelRatQuadBase:
 
     @staticmethod
     @jit(nopython=True)
-    def rat_quad_calc_KernBase_grad_alpha(Rtensor, theta, hp_kernel):
+    def rat_quad_calc_KernBase_grad_alpha(Rtensor, theta, hp_kernel, *args):
         '''
         Parameters
         ----------
