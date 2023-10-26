@@ -148,8 +148,12 @@ vec_idx_lkd_max = idx_vec[bvec_max]
 if vec_idx_lkd_max.size == 0:
     vec_idx_lkd_max = np.array([int(n_theta/2)])
 
-vec_idx_lkd_max = np.array([0, np.argmax(ln_lkd_scl), -1])
-# vec_idx_lkd_max = np.array([62, 62, 62])
+if use_grad:
+    vec_idx_lkd_max = np.array([0, np.argmax(ln_lkd_scl), -1])
+else:
+    list_color_mu   = ['r', 'b', 'g']
+    list_color_sig  = ['pink', 'cyan', 'palegreen',]
+    vec_idx_lkd_max = np.array([0, 62, -1])
 
 n_max = vec_idx_lkd_max.size
     
@@ -204,9 +208,9 @@ for i in range(n_max):
 ''' Plot the model '''
 
 if use_grad:
-    base_str_surr_plt = 'Surr_w_grad_'
+    base_str_surr_plt = 'Surr_w_grad'
 else:
-    base_str_surr_plt = 'Surr_wo_grad_'
+    base_str_surr_plt = 'Surr_wo_grad'
 
 surr_plt = SurrPlt() 
 
@@ -233,6 +237,8 @@ for i in range(n_max):
     plt.tight_layout()
     
     if save_fig:
-        full_path = path.join(folder_all, base_str_surr_plt + f'_{gamma:.1e}.png')
+        gamma_str = f'_{gamma:.1e}'.replace('.', 'p')
+        
+        full_path = path.join(folder_all, base_str_surr_plt + gamma_str + '.png')
         fig.savefig(full_path, dpi = 800, format='png')
 
