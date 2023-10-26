@@ -36,8 +36,9 @@ class GpEvalModel(GpMeanFun):
         mean_fun_vec = self.make_data_vec(mean_fun_val, mean_fun_grad)
         data_vec     = self.make_data_vec(fval_scl, grad_scl)
         
-        Kern, Kcor, KernEta, KernEta_chofac \
-            = self.calc_all_K_w_chofac(Rtensor, self.hp_vals, b_normlz_w_varK = True)[:4]
+        Kern, Kcor, KernEta, KernEta_chofac, condK \
+            = self.calc_all_K_w_chofac(Rtensor, self.hp_vals, 
+                                       b_normlz_w_varK = True, calc_cond = False)[:5]
         
         f_diff = data_vec - mean_fun_vec
         
@@ -47,6 +48,7 @@ class GpEvalModel(GpMeanFun):
         self.Kern               = Kern
         self.KernEta            = KernEta
         self.KernEta_chofac     = KernEta_chofac
+        self.condK              = condK
         self.invKernEta_fdiff   = linalg.cho_solve(KernEta_chofac, f_diff)
         
     def eval_model(self, x2model_in, calc_grad = False, calc_hess = False, squeeze_nx = False):
