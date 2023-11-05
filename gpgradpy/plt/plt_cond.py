@@ -16,18 +16,21 @@ from gpgradpy.src import GaussianProcess
  
 ''' Set options '''
 
-n_eval      = 10
+n_eval      = 20
 cond_max    = 1e10 # Maximum condition number
 
 # Plotting options
-n_gamma     = 10
+n_gamma     = 20
 range_gamma = np.array([1e-4, 1e8])
 
 save_fig    = False
 folder_all  = path.join('figures', '2D_cond')
 
-label_fs    = 12
-tick_fs     = 11
+fs_tick     = 14
+fs_label    = 18
+fs_title    = 18
+
+pad_title   = 10
 markersize  = 12
 
 cmap_cond   = 'jet' # 'viridis' 'jet', 'rainbow', 'turbo'
@@ -40,6 +43,8 @@ lvl_eta     = np.linspace(0, 1, 9)
 
 plt_shrink = 0.8
 plt_aspect = 15
+
+figsize = (4,4)
 
 ''' Define the function of interest '''
 
@@ -90,8 +95,8 @@ if path.exists(folder_all) is False:
 # Calculate the required nugget for the preconditioning method for the 
 # squared exponential kernel. This nugget is used for all kernels and all 
 # wellcond_mtd methods 
-GP     = GaussianProcess(dim, use_grad = True, kernel_type = 'SqExp', wellcond_mtd = 'precon')
-nugget = GP.calc_nugget(n_eval)[1]
+GP          = GaussianProcess(dim, use_grad = True, kernel_type = 'SqExp', wellcond_mtd = 'precon')
+nugget_dflt = GP.calc_nugget(n_eval)[1]
 
 def make_lhs(para_min, para_max, n_eval):
     
@@ -103,7 +108,7 @@ def make_lhs(para_min, para_max, n_eval):
 
 # Set Latin hypercube of nodes
 center    = 1.0 
-factor    = 1e-2
+factor    = 1e-1
 para_min  = center - factor * np.ones(dim)
 para_max  = center + factor * np.ones(dim)
 x_eval    = make_lhs(para_min, para_max, n_eval)
@@ -113,12 +118,13 @@ obj_eval  = calc_obj(x_eval)
 grad_eval = calc_grad(x_eval)
 
 # For the plots
-para_tick_loc = 10**np.arange(np.log10(range_gamma[0]), np.log10(range_gamma[1])+0.1, 2)
+para_tick_loc = 10**np.arange(np.log10(range_gamma[0]), np.log10(range_gamma[1])+0.1, 4)
+# para_tick_loc = 10**np.arange(np.log10(range_gamma[0]), np.log10(range_gamma[1])+0.1, 2)
 
 # Print info 
 dist_x_eval = distance.cdist(x_eval, x_eval, 'euclidean')
 dist_min    = np.nanmin(dist_x_eval + np.diag(np.full(n_eval, np.nan)))
-print(f'dim = {dim}, n_eval = {n_eval}, nugget = {nugget:.2e}, dist_min = {dist_min:.2e}')
+print(f'dim = {dim}, n_eval = {n_eval}, nugget_dflt = {nugget_dflt:.2e}, dist_min = {dist_min:.2e}')
 
 range_theta = GP.gamma2theta(range_gamma)
 theta_vec   = np.logspace(np.log10(range_theta[0]), np.log10(range_theta[1]), n_gamma) 
@@ -126,34 +132,34 @@ gamma_vec   = GP.theta2gamma(theta_vec)
 
 Xmat_para, Ymat_para  = np.meshgrid(gamma_vec, gamma_vec)
 
-def setup_plot():
+def setup_plot(ax, set_labels = True):
 
-    fig, ax = plt.subplots(figsize=(4, 4))
-    
     ax.set_xscale('log')
     ax.set_yscale('log')
     
     if dim != 2:
         raise Exception('Not considered')
     
-    ax.set_xlabel(r'$\gamma_1$', size=label_fs)
-    ax.set_ylabel(r'$\gamma_2$', size=label_fs, rotation=0)
+    if set_labels:
+        ax.set_xlabel(r'$\gamma_1$', size=fs_label)
+        ax.set_ylabel(r'$\gamma_2$', size=fs_label, rotation=0)
     
     ax.grid(True)
-    ax.tick_params(axis='both', which='major', labelsize=tick_fs)
+    ax.tick_params(axis='both', which='major', labelsize=fs_tick)
     ax.set_aspect('equal', adjustable='box')
     
     ax.set_xticks(para_tick_loc)
     ax.set_yticks(para_tick_loc)
-        
-    return fig, ax
 
-def calc_cond_lkd(use_grad, kernel_type, wellcond_mtd, 
-                use_const_eta   = False, 
-                std_fval_scalar = 0,    std_grad_scalar = 0):
+def calc_cond_lkd(use_grad, kernel_type, wellcond_mtd = 'precon', 
+                  std_fval_scalar = 0,    std_grad_scalar = 0, 
+                  use_const_eta   = True, nugget          = None):
     
     std_fval_vec = std_fval_scalar * np.ones(obj_eval.shape)
     std_grad_vec = std_grad_scalar * np.ones(grad_eval.shape)
+    
+    if nugget is None:
+        nugget = nugget_dflt
     
     print(f'use_grad = {use_grad}, kernel_type = {kernel_type}, wellcond_mtd = {wellcond_mtd}')
 
@@ -184,7 +190,9 @@ def calc_cond_lkd(use_grad, kernel_type, wellcond_mtd,
             
             lkd_all[i,j]   = lkd_info.ln_lkd
             condK_all[i,j] = lkd_info.cond
-            
+    
+    log10_condK_all  = np.log10(condK_all)
+    
     ''' Identify max likelihood ''' 
     
     if np.sum(np.isnan(lkd_all)) == n_gamma**2:
@@ -195,8 +203,8 @@ def calc_cond_lkd(use_grad, kernel_type, wellcond_mtd,
         idx_max_row  = np.nanargmax(lkd_all[idx_max_col, :])
         
         loc_max_lkd  = np.array([gamma_vec[idx_max_row], gamma_vec[idx_max_col]])
-        
-    return condK_all, lkd_all, loc_max_lkd
+    
+    return log10_condK_all, lkd_all, loc_max_lkd
 
 def calc_scl_data(data):
     
@@ -226,7 +234,8 @@ def set_base_fig_name(kernel_type, std_fval_scalar, std_grad_scalar):
         
     return base_file_name
 
-def plot_cond_number(fig, ax, log10_condK_all, loc_max_lkd = None, base_file_name = None):
+def plot_cond_number(fig, ax, log10_condK_all, loc_max_lkd = None, 
+                     base_file_name = None, add_color_bar = True):
     
     # Xmat_para, Ymat_para  = np.meshgrid(gamma_vec, gamma_vec)
     
@@ -234,16 +243,17 @@ def plot_cond_number(fig, ax, log10_condK_all, loc_max_lkd = None, base_file_nam
     
     if loc_max_lkd is not None:
         ax.plot(loc_max_lkd[0], loc_max_lkd[1], 'k*', markersize = markersize)
-            
-    fig.colorbar(cs, pad = 0.08, shrink = plt_shrink, aspect = plt_aspect)
-    
-    fig.tight_layout()
-    plt.show() 
+         
+    if add_color_bar:
+        fig.colorbar(cs, pad = 0.08, shrink = plt_shrink, aspect = plt_aspect)
+        fig.tight_layout()
     
     if save_fig and (base_file_name is not None):
         file_name = 'Cond_' + base_file_name
         full_path = path.join(folder_all, file_name)
         fig.savefig(full_path, dpi = 800, format='png', bbox_inches='tight')
+        
+    return cs
 
 def plot_lkd(fig, ax, scl_lkd_all, log10_condK_all, loc_max_lkd = None, base_file_name = None):
     
@@ -274,19 +284,21 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
     
     base_file_name = set_base_fig_name(kernel_type, std_fval_scalar, std_grad_scalar)
     
-    condK_all, lkd_all, loc_max_lkd \
-        = calc_cond_lkd(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
-                        std_fval_scalar, std_grad_scalar)
+    log10_condK_all, lkd_all, loc_max_lkd \
+        = calc_cond_lkd(use_grad, kernel_type, wellcond_mtd, 
+                        std_fval_scalar, std_grad_scalar, 
+                        use_const_eta)
         
-    log10_condK_all = np.log10(condK_all)
     scl_lkd_all     = calc_scl_data(lkd_all)
     
     ''' Plot '''
     
-    fig0, ax0 = setup_plot()
+    fig0, ax0 = plt.subplots(figsize=figsize)
+    setup_plot(ax0)
     plot_cond_number(fig0, ax0, log10_condK_all, loc_max_lkd, base_file_name)
     
-    fig1, ax1 = setup_plot()
+    fig1, ax1 = plt.subplots(figsize=figsize)
+    setup_plot(ax1)
     plot_lkd(fig1, ax1, scl_lkd_all, log10_condK_all, loc_max_lkd, base_file_name)
         
 ''' Grad-free, noise-free '''
@@ -342,7 +354,7 @@ if False:
 ''' Non-Gaussian kernels with gradients '''
 
 # Baseline method with constant nuggget
-if True:
+if False:
     use_grad         = True
     kernel_type      = 'SqExp'
     wellcond_mtd     = None
@@ -381,5 +393,68 @@ if False:
         calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
                     std_fval_scalar, std_grad_scalar)
 
+# ''' Plot with and without the use of a nugget '''
+
+# kernel_type  = 'SqExp'
+# wellcond_mtd = None
+
+# use_grad = True
+# log10_condK_wGrad_woEta_all, lkd_wGrad_woEta_all, loc_max_wGrad_woEta_lkd \
+#     = calc_cond_lkd(use_grad, kernel_type, wellcond_mtd, nugget = 0)
+    
+# use_grad = False
+# log10_condK_woGrad_woEta_all, lkd_woGrad_woEta_all, loc_max_woGrad_woEta_lkd \
+#     = calc_cond_lkd(use_grad, kernel_type, wellcond_mtd, nugget = 0)
+    
+# use_grad = True
+# log10_condK_wGrad_wEta_all, lkd_wGrad_wEta_all, loc_max_wGrad_wEta_lkd \
+#     = calc_cond_lkd(use_grad, kernel_type, wellcond_mtd)
+    
+# use_grad = False
+# log10_condK_woGrad_wEta_all, lkd_woGrad_wEta_all, loc_max_woGrad_wEta_lkd \
+#     = calc_cond_lkd(use_grad, kernel_type, wellcond_mtd)
+
+# # Plot only without nugget
+# fig, axes = plt.subplots(1, 2, figsize=(5,2.5), sharey=True)
+
+# axes[0].set_ylabel(r'$\gamma_2$', size=fs_label, rotation=0)
+# axes[0].set_title(r'log($\kappa(\mathrm{K})$)',          size = fs_title)
+# axes[1].set_title(r'log($\kappa(\mathrm{K}_{\nabla})$)', size = fs_title)
+
+# for i in range(2):
+#     axes[i].set_xlabel(r'$\gamma_1$', size=fs_label)
+
+# setup_plot(axes[0], set_labels = False)
+# setup_plot(axes[1], set_labels = False)
+
+# plot_cond_number(fig, axes[0], log10_condK_woGrad_woEta_all, loc_max_woGrad_wEta_lkd, add_color_bar = False)
+# color_axis = plot_cond_number(fig, axes[1], log10_condK_wGrad_woEta_all, loc_max_wGrad_wEta_lkd, add_color_bar = False)
+
+# fig.subplots_adjust(right=0.8)
+# cbar_ax = fig.add_axes([0.85, 0.15, 0.04, 0.7])
+# fig.colorbar(color_axis, cax=cbar_ax)
+
+# # Plot only without nugget
+# fig, axes = plt.subplots(2, 2, figsize=(6, 5), sharey=True, sharex=True)
+
+# axes[0,0].set_title(r'log($\kappa(\mathrm{K} + \eta \mathrm{I})$)',          size = fs_title, pad = pad_title)
+# axes[0,1].set_title(r'log($\kappa(\mathrm{K}_{\nabla} + \eta \mathrm{I})$)', size = fs_title, pad = pad_title)
+
+# for i in range(2):
+#     axes[i,0].set_ylabel(r'$\gamma_2$', size=fs_label, rotation=0)
+#     axes[1,i].set_xlabel(r'$\gamma_1$', size=fs_label)
+    
+#     for j in range(2):
+#         setup_plot(axes[i,j], set_labels = False)
 
 
+
+# plot_cond_number(fig, axes[0,0], log10_condK_woGrad_woEta_all, loc_max_woGrad_wEta_lkd, add_color_bar = False)
+# color_axis = plot_cond_number(fig, axes[0,1], log10_condK_wGrad_woEta_all, loc_max_wGrad_wEta_lkd, add_color_bar = False)
+
+# plot_cond_number(fig, axes[1,0], log10_condK_woGrad_wEta_all, loc_max_woGrad_wEta_lkd, add_color_bar = False)
+# plot_cond_number(fig, axes[1,1], log10_condK_wGrad_wEta_all, loc_max_wGrad_wEta_lkd, add_color_bar = False)
+
+# fig.subplots_adjust(right=0.8)
+# cbar_ax = fig.add_axes([0.85, 0.15, 0.04, 0.7])
+# fig.colorbar(color_axis, cax=cbar_ax)
