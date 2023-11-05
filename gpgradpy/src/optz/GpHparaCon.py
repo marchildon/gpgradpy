@@ -38,7 +38,11 @@ class GpHparaCon:
             Bounds for the optimization of the hyperparameters
         '''
         
-        def calc_hp_range(range_hp, hp_old, use_log10 = True):
+        def calc_hp_range(range_hp, hp_old_in, use_log10 = True):
+            
+            hp_old = np.max((hp_old_in, range_hp[0]))
+            hp_old = np.min((hp_old, range_hp[1]))
+            
             dom_hp_len  = range_frac * (range_hp[1] - range_hp[0])
             hp_min      = np.max((range_hp[0], hp_old - dom_hp_len))
             hp_max      = np.min((range_hp[1], hp_old + dom_hp_len))
@@ -76,7 +80,7 @@ class GpHparaCon:
             para_max[hp_optz_info.idx_kernel] = self.range_hp_kernel[1]
         
         if hp_optz_info.has_varK:
-            if cstr_w_old_hp:
+            if cstr_w_old_hp and (i_optz > self.n_eval_hp_const):
                 hp_min, hp_max = calc_hp_range(np.log10(self.range_varK), np.log10(self.hp_varK_all[idx]))
             else:
                 hp_min = self.range_varK[0]
@@ -86,7 +90,7 @@ class GpHparaCon:
             para_max[hp_optz_info.idx_varK] = hp_max
         
         if hp_optz_info.has_var_fval:
-            if cstr_w_old_hp:
+            if cstr_w_old_hp and (i_optz > self.n_eval_hp_const):
                 hp_min, hp_max = calc_hp_range(np.log10(self.range_var_fval), np.log10(self.hp_var_fval_all[idx]))
             else:
                 hp_min = self.range_var_fval[0]
