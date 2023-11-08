@@ -146,7 +146,10 @@ fig, axes = plt.subplots(2, figsize=(8,4), sharex=True)
 plt.rcParams.update({'text.usetex': True,
                       'text.latex.preamble': r'\usepackage{amsfonts}'})
 
+
+
 ax = axes[0] 
+ax.set_xlim([xmin, xmax])
 ax.set_ylabel('Surrogate', fontsize = fs_axis)
 surr_plt.plot_surr(ax, x_exa, obj_exa, x_eval, obj_eval, gp_mu_all, gp_sig_all, 
                    n_sig, legend_loc = legend_loc)
