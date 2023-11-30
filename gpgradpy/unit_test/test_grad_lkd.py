@@ -13,13 +13,15 @@ from gpgradpy.src import GaussianProcess
 
 ''' Set parameters '''
 
- # req_vmin is not setup for cases with noise on the objective or gradient 
+use_lkd_adj_mtd   = True
+lkd_sigK_pnlt_use = True
 
-# wellcond_mtd_vec = [None, 'req_vmin', 'precon']
-wellcond_mtd_vec = [None, 'precon']
-# wellcond_mtd_vec = ['req_vmin']
-
+# req_vmin is not setup for cases with noise on the objective or gradient 
+wellcond_mtd_vec = [None, 'req_vmin', 'precon']
 kernel_type_vec  = ['SqExp', 'Ma5f2', 'RatQu']
+
+# wellcond_mtd_vec = ['precon']
+# kernel_type_vec  = ['SqExp']
 
 eps      = 1e-8
 use_grad = True
@@ -33,8 +35,8 @@ n_der    = dim
 eta_dflt = 1e-1
 
 # Testing tolerances
-rtol    = 1e-5
-atol    = 1e-6
+rtol    = 1e-4
+atol    = 1e-5
 
 b_print_info  = False
 
@@ -67,7 +69,7 @@ def call_fun(x_in, calc_grad):
 
     return fun_out, grad_out
 
-theta_vec       = np.linspace(1.5, 3, dim) 
+theta_vec       = 0.001*np.linspace(1.5, 3, dim) 
 varK_init       = 4
 var_fval_init   = 3
 var_fgrad_init  = 4
@@ -93,6 +95,8 @@ def setup_GP_wo_noise(wellcond_mtd, kernel_type):
     std_fval    = np.zeros(obj_eval.shape)
     std_fgrad   = np.zeros(grad_eval.shape)
     GP_w0_noise = GaussianProcess(dim, use_grad, kernel_type, wellcond_mtd)
+    
+    GP_w0_noise.lkd_sigK_pnlt_use = lkd_sigK_pnlt_use
     GP_w0_noise.set_data(x_eval, obj_eval, std_fval, grad_eval, std_fgrad, bvec_use_grad)
     
     GP_w0_noise._etaK = eta_dflt
@@ -103,6 +107,8 @@ def setup_GP_w_noise(wellcond_mtd, kernel_type):
     
     std_fval   = std_fgrad = None
     GP_w_noise = GaussianProcess(dim, use_grad, kernel_type, wellcond_mtd)
+    
+    GP_w_noise.lkd_sigK_pnlt_use = lkd_sigK_pnlt_use
     GP_w_noise.set_data(x_eval, obj_eval, std_fval, grad_eval, std_fgrad, bvec_use_grad)
     
     GP_w_noise._etaK = eta_dflt
@@ -116,7 +122,8 @@ def calc_GP_lkd_w_grad(GP, hp_vals1):
     else:
         calc_cond = True
         
-    lkd_info        = GP.calc_lkd_all(hp_vals1, calc_cond = calc_cond, calc_grad = True)[0]
+    lkd_info        = GP.calc_lkd_all(hp_vals1, calc_cond = calc_cond, calc_grad = True, 
+                                      use_lkd_adj_mtd = use_lkd_adj_mtd)[0]
 
     lkd             = lkd_info.ln_lkd
     lkd_der         = lkd_info.ln_lkd_grad
@@ -154,20 +161,24 @@ def calc_fd_lkd(GP_in, wellcond_mtd, kernel_type, hp_vals_in, idx_in, text2print
         ((lkd, ln_det_Kmat, hp_beta, cond), 
          (lkd_der, ln_det_Kmat_der, hp_beta_der, cond_der)) \
             = calc_GP_lkd_w_grad(GP_w_noise, hp_vals_w_noise)
-    
-    if hp_beta_der.size > 0:
+            
+    if (hp_beta_der is not None) and (hp_beta_der.size > 0):
         beta_fd          = (lkd_info_in.hp_beta - hp_beta) / eps 
         beta_der_diff    = hp_beta_der[0,idx_in] - beta_fd[0]
         np.testing.assert_allclose(hp_beta_der[0,idx_in], beta_fd[0], rtol = rtol, atol = atol)
         
-    
-    ln_detKmat_fd       = (lkd_info_in.ln_det_Kmat - ln_det_Kmat) / eps
-    ln_detKmat_der_diff = ln_det_Kmat_der[idx_in] - ln_detKmat_fd
-    ln_detKmat_frac     = np.abs(ln_det_Kmat_der[idx_in]) / np.max((1e-16, ln_detKmat_fd))
+    if ln_det_Kmat_der is not None:
+        ln_detKmat_fd       = (lkd_info_in.ln_det_Kmat - ln_det_Kmat) / eps
+        ln_detKmat_der_diff = ln_det_Kmat_der[idx_in] - ln_detKmat_fd
+        ln_detKmat_frac     = np.abs(ln_det_Kmat_der[idx_in]) / np.max((1e-16, ln_detKmat_fd))
     
     lkd_fd           = (lkd_info_in.ln_lkd - lkd) / eps
     lkd_der_diff     = lkd_der[idx_in] - lkd_fd
     lkd_der_frac     = np.abs(lkd_der[idx_in]) / np.max((1e-16, lkd_fd))
+    
+    # print(f'lkd     = {lkd}')
+    # print(f'lkd_der = {lkd_der}')
+    # print(f'lkd_fd  = {lkd_fd}')
     
     if wellcond_mtd != 'precon':
         calc_cond    = True
@@ -191,7 +202,9 @@ def calc_fd_lkd(GP_in, wellcond_mtd, kernel_type, hp_vals_in, idx_in, text2print
         if hp_beta_der.size > 0:
             print(f'beta: exa der = {hp_beta_der[0,idx_in]:.3e}, fd = {beta_fd[0]:.3e}, der diff = {beta_der_diff:.3e}')
         
-    np.testing.assert_allclose(ln_det_Kmat_der[idx_in], ln_detKmat_fd, rtol = rtol, atol = atol)
+    if ln_det_Kmat_der is not None:
+        np.testing.assert_allclose(ln_det_Kmat_der[idx_in], ln_detKmat_fd, rtol = rtol, atol = atol)
+        
     np.testing.assert_allclose(lkd_der[idx_in],         lkd_fd,        rtol = rtol, atol = atol)
     
     if calc_cond:

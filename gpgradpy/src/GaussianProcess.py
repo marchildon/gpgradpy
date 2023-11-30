@@ -60,7 +60,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
 
     use_const_eta       = True # If False for the precon method then a variable nugget is used
 
-    # Condition number: cond_max_target <= cond_max << cond_max_abs
+    # Condition number: cond_max_target <= cond_max <= cond_max_abs
     cond_max_target     = 1e10  # Used to select the nugget value
     cond_max            = 1e10  # Used for the optz constraint of the hyperparameters
     cond_max_abs        = 1e16  # Cholesky decomposition is not attempted if the condition number is greater than this value 
@@ -76,6 +76,8 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     tol_dist2diag_vreq  = 1e-1 # Stop iterating once dist from point log(thetavec) and theta 1vec is less than this tolerance
     
     ''' Options related to the hyperparameters'''
+    
+    use_lkd_adj_mtd     = True # The adjoint method is more efficient than the forward method
     
     # Methods on how to initialize the optimization for 'max_lkd'
     lkd_optz_start_avail = ['hp_best' 'lhs'] # hp_best requires the use of wellcond_mtd = 'precon'
@@ -97,6 +99,11 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     range_var_fgrad      = [1e-8, 1e8]
     
     b_optz_hp_kernel     = True # Default is to optz the kernel hyperpara if there are any
+    
+    lkd_sigK_pnlt_use       = False
+    lkd_sigK_pnlty_lb_varf  = 0.1 # Min value for the variance of the evaluation of f
+    lkd_sigK_pnlt_c1        = 1.0
+    lkd_sigK_pnlt_c2        = 2.0
 
     ''' Initiate variables ''' 
     
