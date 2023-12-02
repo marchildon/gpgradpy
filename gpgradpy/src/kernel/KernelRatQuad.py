@@ -847,7 +847,7 @@ class KernelRatQuadGradMod:
 class KernelRatQuad(KernelRatQuadBase, KernelRatQuadGradMod):
     
     rat_quad_hp_kernel_default = 2
-    rat_quad_range_hp_kernel   = [1e-3, 10]
+    rat_quad_hp_kernel_range   = [1e-3, 10]
 
     @staticmethod
     def rat_quad_theta2gamma(theta):

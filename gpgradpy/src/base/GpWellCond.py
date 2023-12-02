@@ -137,14 +137,14 @@ class GpWellCond(GpWellCondVreq):
             elif (self.wellcond_mtd == 'req_vmin') or (self.wellcond_mtd == 'req_vmin_frac'):
                 eta_Kgrad = self.calc_nugget_Kfull_vreq(n_eval)
             else:
-                if self.set_eta_mtd_dflt == 'Kbase_eta':
+                if self.cond_eta_set_mtd == 'Kbase_eta':
                     eta_Kgrad = eta_Kbase
-                elif self.set_eta_mtd_dflt == 'Kbase_eta_w_dim':
+                elif self.cond_eta_set_mtd == 'Kbase_eta_w_dim':
                     eta_Kgrad = eta_Kbase * (self.dim + 1)
-                elif self.set_eta_mtd_dflt == 'dflt_eta':
-                    eta_Kgrad = self.min_nugget_dflt
+                elif self.cond_eta_set_mtd == 'dflt_eta':
+                    eta_Kgrad = self.cond_eta_dflt
                 else:
-                    raise Exception(f'Uknown method for set_eta_mtd_dflt = {self.set_eta_mtd_dflt}')
+                    raise Exception(f'Uknown method for cond_eta_set_mtd = {self.cond_eta_set_mtd}')
         else:
             eta_Kgrad = np.nan
             

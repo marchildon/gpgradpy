@@ -27,7 +27,7 @@ class LkdInfo:
 
 class calcLkdWoNoise:
     
-    def calc_lkd_all_wo_noise(self, theta, Kern_chofac, KernGrad_hp = None, calc_lkd = True, use_lkd_adj_mtd = None):    
+    def calc_lkd_all_wo_noise(self, theta, Kern_chofac, KernGrad_hp = None, calc_lkd = True, lkd_use_adj_mtd = None):    
         '''
         Parameters
         ----------
@@ -45,8 +45,8 @@ class calcLkdWoNoise:
         class of type LkdInfo
         '''
         
-        if use_lkd_adj_mtd is None:
-            use_lkd_adj_mtd = self.use_lkd_adj_mtd
+        if lkd_use_adj_mtd is None:
+            lkd_use_adj_mtd = self.lkd_use_adj_mtd
         
         fval_scl, std_fval, grad_scl, std_fgrad = self.get_scl_eval_data()
 
@@ -55,7 +55,7 @@ class calcLkdWoNoise:
         data_vec = self.make_data_vec(fval_scl, grad_scl)
         n_data   = data_vec.size
         
-        if use_lkd_adj_mtd:
+        if lkd_use_adj_mtd:
             mean_model_val, mean_model_hp_grad, hp_beta, hp_beta_grad \
                 = self.calc_model_max_lkd(Kern_chofac, data_vec)
                 
@@ -118,7 +118,7 @@ class calcLkdWoNoise:
     def calc_lkd_sigK_pnlt(self, varK, fval_vec):
         
         if self.lkd_sigK_pnlt_use:
-            var_fval = np.max((np.var(fval_vec), self.lkd_sigK_pnlty_lb_varf)) # Variance of the residual
+            var_fval = np.max((np.var(fval_vec), self.lkd_sigK_pnlt_lb_var))
             max_fun  = np.max((varK - self.lkd_sigK_pnlt_c2 * var_fval, 0))
             
             pnlt_val               = self.lkd_sigK_pnlt_c1 * max_fun**2
@@ -183,7 +183,7 @@ class calcLkdWoNoise:
 class calcLkdWNoise:   
         
     def calc_lkd_all_w_noise(self, theta, Kcov_chofac, Kcov_grad_hp = None, 
-                             calc_lkd = True, use_lkd_adj_mtd = None):
+                             calc_lkd = True, lkd_use_adj_mtd = None):
         '''
         Parameters
         ----------
@@ -203,8 +203,8 @@ class calcLkdWNoise:
         
         # assert not(self.lkd_sigK_pnlt_use), 'Not yet setup to have lkd_sigK_pnlt_use be True'
         
-        if use_lkd_adj_mtd is None:
-            use_lkd_adj_mtd = self.use_lkd_adj_mtd
+        if lkd_use_adj_mtd is None:
+            lkd_use_adj_mtd = self.lkd_use_adj_mtd
         
         fval_scl, std_fval, grad_scl, std_fgrad = self.get_scl_eval_data()
         
@@ -221,7 +221,7 @@ class calcLkdWNoise:
         sol_King_data_diff = sol_King_data_diff = linalg.cho_solve(Kcov_chofac, data_diff)
         
         if calc_lkd:
-            if use_lkd_adj_mtd:
+            if lkd_use_adj_mtd:
                 ln_det_Kcov = 2*np.sum(np.log(np.diag(Kcov_chofac[0])))
                 ln_lkd      = -(ln_det_Kcov + np.dot(data_diff, sol_King_data_diff)) /2
                 
@@ -268,7 +268,7 @@ class calcLkdWNoise:
 class CalcLkd(calcLkdWNoise, calcLkdWoNoise):
        
     def calc_lkd_all(self, hp_vals, calc_lkd = True, calc_cond = False, 
-                     calc_grad = False, use_lkd_adj_mtd = None):
+                     calc_grad = False, lkd_use_adj_mtd = None):
         '''
         Parameters
         ----------
@@ -289,8 +289,8 @@ class CalcLkd(calcLkdWNoise, calcLkdWoNoise):
             True if the Cholesky factorization was successful, False, otherwise.
         '''
         
-        if use_lkd_adj_mtd is None:
-            use_lkd_adj_mtd = self.use_lkd_adj_mtd
+        if lkd_use_adj_mtd is None:
+            lkd_use_adj_mtd = self.lkd_use_adj_mtd
         
         x_scl, Rtensor = self.get_scl_x_w_dist()
         
@@ -312,7 +312,7 @@ class CalcLkd(calcLkdWNoise, calcLkdWoNoise):
             else:
                 b_chofac_good   = True
                 lkd_info        = self.calc_lkd_all_w_noise(hp_vals.theta, Kcov_chofac, 
-                                                            Kcov_grad_hp, use_lkd_adj_mtd = use_lkd_adj_mtd)
+                                                            Kcov_grad_hp, lkd_use_adj_mtd = lkd_use_adj_mtd)
             
             if calc_cond and calc_grad:
                 lkd_info.cond, lkd_info.cond_grad = self.calc_cond_w_grad(Kcov, Kcov_chofac, Kcov_grad_hp)
@@ -336,7 +336,7 @@ class CalcLkd(calcLkdWNoise, calcLkdWoNoise):
                 
                 lkd_info = self.calc_lkd_all_wo_noise(hp_vals.theta, Kern_chofac, 
                                                       KernGrad_hp, 
-                                                      use_lkd_adj_mtd = use_lkd_adj_mtd)
+                                                      lkd_use_adj_mtd = lkd_use_adj_mtd)
                 
                 if calc_cond and calc_grad:
                     lkd_info.cond, lkd_info.cond_grad = self.calc_cond_w_grad(Kern_w_eta, Kern_chofac, KernGrad_hp)

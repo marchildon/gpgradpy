@@ -649,7 +649,7 @@ class KernelMatern5f2GradMod:
 class KernelMatern5f2(KernelMatern5f2Base, KernelMatern5f2GradMod):
 
     matern_5f2_hp_kernel_default = None
-    matern_5f2_range_hp_kernel   = [np.nan, np.nan]
+    matern_5f2_hp_kernel_range   = [np.nan, np.nan]
     
     @staticmethod
     def matern_5f2_theta2gamma(theta):

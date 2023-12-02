@@ -152,8 +152,8 @@ def setup_plot(ax, set_labels = True):
     ax.set_yticks(para_tick_loc)
 
 def calc_cond_lkd(use_grad, kernel_type, wellcond_mtd = 'precon', 
-                  std_fval_scalar = 0,    std_grad_scalar = 0, 
-                  use_const_eta   = True, nugget          = None):
+                  std_fval_scalar   = 0,    std_grad_scalar = 0, 
+                  cond_eta_is_const = True, nugget          = None):
     
     std_fval_vec = std_fval_scalar * np.ones(obj_eval.shape)
     std_grad_vec = std_grad_scalar * np.ones(grad_eval.shape)
@@ -166,7 +166,7 @@ def calc_cond_lkd(use_grad, kernel_type, wellcond_mtd = 'precon',
     ''' Create the GP and evaluate the surrogate'''
     
     GP = GaussianProcess(dim, use_grad, kernel_type, wellcond_mtd)
-    GP.use_const_eta = use_const_eta
+    GP.cond_eta_is_const = cond_eta_is_const
     
     if use_grad:
         GP.set_data(x_eval, obj_eval, std_fval_vec, grad_eval, std_grad_vec)
@@ -277,8 +277,8 @@ def plot_lkd(fig, ax, scl_lkd_all, log10_condK_all, loc_max_lkd = None, base_fil
         fig.savefig(full_path, dpi = 800, format='png', bbox_inches='tight')
 
 def calc_n_plot(use_grad, kernel_type, wellcond_mtd, 
-                use_const_eta   = False, 
-                std_fval_scalar = 0,    std_grad_scalar = 0):
+                cond_eta_is_const = False, 
+                std_fval_scalar   = 0,    std_grad_scalar = 0):
     
     ''' Calculations '''
     
@@ -287,7 +287,7 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
     log10_condK_all, lkd_all, loc_max_lkd \
         = calc_cond_lkd(use_grad, kernel_type, wellcond_mtd, 
                         std_fval_scalar, std_grad_scalar, 
-                        use_const_eta)
+                        cond_eta_is_const)
         
     scl_lkd_all     = calc_scl_data(lkd_all)
     
@@ -303,23 +303,23 @@ def calc_n_plot(use_grad, kernel_type, wellcond_mtd,
         
 ''' Grad-free, noise-free '''
 
-# use_grad         = False
-# kernel_type_vec  = ['SqExp']
-# wellcond_mtd     = None
-# use_const_eta    = True
-# std_fval_scalar  = 0
-# std_grad_scalar  = 0
+# use_grad          = False
+# kernel_type_vec   = ['SqExp']
+# wellcond_mtd      = None
+# cond_eta_is_const = True
+# std_fval_scalar   = 0
+# std_grad_scalar   = 0
 
 # for kernel_type in kernel_type_vec:
 #     calc_n_plot(use_grad,kernel_type, wellcond_mtd)
 
 if False:
-    use_grad         = False
-    kernel_type_vec  = ['SqExp', 'Ma5f2', 'RatQu']
-    wellcond_mtd     = None
-    use_const_eta    = True
-    std_fval_scalar  = 0
-    std_grad_scalar  = 0
+    use_grad          = False
+    kernel_type_vec   = ['SqExp', 'Ma5f2', 'RatQu']
+    wellcond_mtd      = None
+    cond_eta_is_const = True
+    std_fval_scalar   = 0
+    std_grad_scalar   = 0
     
     for kernel_type in kernel_type_vec:
         calc_n_plot(use_grad,kernel_type, wellcond_mtd)
@@ -328,69 +328,69 @@ if False:
 
 # Noise-free
 if False:
-    use_grad         = True
-    kernel_type      = 'SqExp'
-    wellcond_mtd_vec = [None, 'req_vmin', 'precon']
-    use_const_eta    = True
-    std_fval_scalar  = 0
-    std_grad_scalar  = 0
+    use_grad          = True
+    kernel_type       = 'SqExp'
+    wellcond_mtd_vec  = [None, 'req_vmin', 'precon']
+    cond_eta_is_const = True
+    std_fval_scalar   = 0
+    std_grad_scalar   = 0
     
     for wellcond_mtd in wellcond_mtd_vec:
-        calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
+        calc_n_plot(use_grad, kernel_type, wellcond_mtd, cond_eta_is_const, 
                     std_fval_scalar, std_grad_scalar)
 
 # # Noisy
 # if False:
-#     use_grad         = True
-#     kernel_type      = 'SqExp'
-#     wellcond_mtd     = 'precon'
-#     use_const_eta    = True
-#     std_fval_scalar  = 1e-6
-#     std_grad_scalar  = 1e-1
+#     use_grad          = True
+#     kernel_type       = 'SqExp'
+#     wellcond_mtd      = 'precon'
+#     cond_eta_is_const = True
+#     std_fval_scalar   = 1e-6
+#     std_grad_scalar   = 1e-1
     
-#     calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
+#     calc_n_plot(use_grad, kernel_type, wellcond_mtd, cond_eta_is_const, 
 #                 std_fval_scalar, std_grad_scalar)
     
 ''' Non-Gaussian kernels with gradients '''
 
 # Baseline method with constant nuggget
 if False:
-    use_grad         = True
-    kernel_type      = 'SqExp'
-    wellcond_mtd     = None
-    use_const_eta    = False
-    std_fval_scalar  = 0
-    std_grad_scalar  = 0
+    use_grad          = True
+    kernel_type       = 'SqExp'
+    wellcond_mtd      = None
+    cond_eta_is_const = False
+    std_fval_scalar   = 0
+    std_grad_scalar   = 0
     
-    calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
+    calc_n_plot(use_grad, kernel_type, wellcond_mtd, cond_eta_is_const, 
                 std_fval_scalar, std_grad_scalar)
 
 # Precon method with variable nugget
 if False:
-    use_grad         = True
-    kernel_type_vec  = ['Ma5f2', 'RatQu']
-    wellcond_mtd_vec = ['precon', None]
-    use_const_eta    = False
-    std_fval_scalar  = 0
-    std_grad_scalar  = 0
+    use_grad          = True
+    kernel_type_vec   = ['Ma5f2', 'RatQu']
+    wellcond_mtd_vec  = ['precon', None]
+    cond_eta_is_const = False
+    std_fval_scalar   = 0
+    std_grad_scalar   = 0
     
     for kernel_type in kernel_type_vec:
         for wellcond_mtd in wellcond_mtd_vec:
-            calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
+            calc_n_plot(use_grad, kernel_type, wellcond_mtd, cond_eta_is_const, 
                         std_fval_scalar, std_grad_scalar)
 
 ''' All kernels with grad, noisy-case '''
 
 if False:
-    use_grad         = True
-    kernel_type_vec  = ['SqExp', 'Ma5f2', 'RatQu']
-    wellcond_mtd     = 'precon'
-    use_const_eta    = False
-    std_fval_scalar  = 1e-6
-    std_grad_scalar  = 1e-1
+    use_grad          = True
+    kernel_type_vec   = ['SqExp', 'Ma5f2', 'RatQu']
+    wellcond_mtd      = 'precon'
+    cond_eta_is_const = False
+    std_fval_scalar   = 1e-6
+    std_grad_scalar   = 1e-1
     
     for kernel_type in kernel_type_vec:
-        calc_n_plot(use_grad, kernel_type, wellcond_mtd, use_const_eta, 
+        calc_n_plot(use_grad, kernel_type, wellcond_mtd, cond_eta_is_const, 
                     std_fval_scalar, std_grad_scalar)
 
 # ''' Plot with and without the use of a nugget '''

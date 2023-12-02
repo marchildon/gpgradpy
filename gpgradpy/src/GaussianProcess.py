@@ -31,104 +31,108 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     save_data_npz       = False
     save_data_txt       = False
 
-    ''' Default sub-optimization options '''
+    ''' Options for the optimization of the hyperparameters '''
+    
+    optz_mtd            = 'SLSQP' # 'trust-constr' or 'SLSQP' (SLSQP is recommended since it has been found to be faster and more robust)
+    optz_n_x0           = 5     # No. of starts for the optz of the hyperparameters (not used if lkd_optz_start_mtd == 'hp_best')
+    optz_iter_max       = 250   # Max no. of iter for the optz of the hyperparameters
+    optz_tol_obj        = 1e-12 # Optz termination criteria for delta obj
+    optz_tol_x          = 1e-12 # Optz termination criteria for dist between sol
     
     optz_log_hp_theta   = True # More effective optz when this is True
     optz_log_hp_var     = True # Optimize the log of varK, var_fval, and var_fgrad 
     optz_log_hp_kernel  = True # Optimize the log of the hyperparameter of the kernel (if any)
     
-    hp_optz_method      = 'SLSQP' # 'trust-constr' or 'SLSQP' (SLSQP is recommended since it has been found to be faster and more robust)
-    n_surr_optz_start   = 5     # No. of starts for the optz of the hyperparameters (not used if lkd_optz_start == 'hp_best')
-    n_surr_optz_iter    = 250   # Max no. of iter for the optz of the hyperparameters
-    hp_optz_obj_tol     = 1e-12 # Optz termination criteria for delta obj
-    hp_optz_xtol        = 1e-12 # Optz termination criteria for dist between sol
+    ''' Options for the marginal log-likelihood '''
     
-    ''' Options related to the condition number '''
+    lkd_use_adj_mtd     = True # The adjoint method is more efficient than the forward method
+    
+    # Methods on how to initialize the optimization for 'max_lkd'
+    lkd_optz_start_avail = ['hp_best' 'lhs'] # hp_best requires the use of wellcond_mtd = 'precon'
+    lkd_optz_start_mtd   = 'hp_best' 
+    lkd_hp_best_n_eval   = 40 # No. of points to calculate the lkd if lkd_optz_start_mtd = 'hp_best' 
+    
+    # Penalty to avoid having large values of sigK
+    lkd_sigK_pnlt_use    = False
+    lkd_sigK_pnlt_lb_var = 0.1 # Min value for the variance of the evaluation of f
+    lkd_sigK_pnlt_c1     = 1.0
+    lkd_sigK_pnlt_c2     = 2.0
+    
+    ''' Options related to the hyperparameters'''
+    
+    # Initial hyperparameters are used until the no. of eval is equal to this constant
+    hp_const_n_eval      = 1   
+    
+    # Initial hyperparamters values are used until n_eval > hp_const_n_eval
+    hp_theta_init        = 1e-2
+    hp_varK_init         = 1.0 # Used if varK is optimized numerically, ie not in closed form solution
+    hp_kernel_init       = np.nan
+    hp_var_fval_init     = 0.0 
+    hp_var_fgrad_init    = 0.0
+
+    hp_theta_range       = [1e-10, 1e24] 
+    hp_varK_range        = [1e-24, 1e14] # Used if varK is optimized numerically (when there is noisy data)
+    hp_kernel_range      = [np.nan, np.nan]
+    hp_var_fval_range    = [1e-8, 1e8]
+    hp_var_fgrad_range   = [1e-8, 1e8]
+    
+    ''' Options related to the ill-conditioning of the covariance matrix '''
     
     # Ensures the gradient-enahnced correlation matrix is well-conditioned 
-    wellcond_mtd_avail = [None,            # no method is used
-                          'req_vmin',      # ensure min dist is sufficiently large
-                          'req_vmin_frac', # use a vreq * vreq_frac
-                          'precon',        # modify how the corr matrix is constructed 
-                          'dflt_vmin',     # set min xdist to dist_min_dflt
-                          'dflt_vmax']     # set max xdist to dist_max_dflt
-
-    set_eta_mtd_dflt    = 'Kbase_eta' # Used if selected wellcond_mtd does not have a default method, ie wellcond_mtd == None
+    wellcond_mtd_avail  = [None,            # no method is used
+                           'req_vmin',      # ensure min dist is sufficiently large
+                           'req_vmin_frac', # use a vreq * cond_vreq_frac
+                           'precon',        # modify how the corr matrix is constructed 
+                           'dflt_vmin',     # set min xdist to cond_dist_min_dflt
+                           'dflt_vmax']     # set max xdist to cond_dist_max_dflt
+    
+    cond_eta_set_mtd    = 'Kbase_eta' # Used if selected wellcond_mtd does not have a default method, ie wellcond_mtd == None
                                       # 'Kbase_eta' : Use req eta for Kbase, ie eta =  n_eval / (cond_max - 1)
                                       # 'Kbase_eta_w_dim' : Use eta =  n_eval (dim + 1) / (cond_max - 1)
-                                      # 'dflt_eta'  : min_nugget_dflt is used
-
-    use_const_eta       = True # If False for the precon method then a variable nugget is used
+                                      # 'dflt_eta'  : cond_eta_dflt is used
+    cond_eta_is_const   = True  # If False for the precon method then a variable nugget is used
+    cond_eta_dflt       = 1e-8  # Default min nugget value if cond_eta_set_mtd == dflt_eta
+    
 
     # Condition number: cond_max_target <= cond_max <= cond_max_abs
     cond_max_target     = 1e10  # Used to select the nugget value
     cond_max            = 1e10  # Used for the optz constraint of the hyperparameters
     cond_max_abs        = 1e16  # Cholesky decomposition is not attempted if the condition number is greater than this value 
-    condnum_norm        = 2     # The type of norm used to calculate the condition number (2 or 'fro'), using 2 is recommended
+    cond_norm           = 2     # The type of norm used to calculate the condition number (2 or 'fro'), using 2 is recommended
     
-    min_nugget_dflt     = 1e-8  # Default min nugget value if set_eta_mtd_dflt == dflt_eta
-    dist_min_dflt       = 1     # Used if wellcond_mtd == dflt_vmin
-    dist_max_dflt       = 1     # Used if wellcond_mtd == dflt_vmax
+    cond_dist_min_dflt  = 1     # Used if wellcond_mtd == dflt_vmin
+    cond_dist_max_dflt  = 1     # Used if wellcond_mtd == dflt_vmax
     
     # Options if wellcond_mtd == 'req_vmin' or 'req_vmin_frac'
-    vreq_frac           = 0.1
-    max_vreq_optz_iter  = 5    # Max no. iteration 
-    tol_dist2diag_vreq  = 1e-1 # Stop iterating once dist from point log(thetavec) and theta 1vec is less than this tolerance
+    cond_vreq_frac      = 0.1
+    cond_vreq_max_iter  = 5    # Max no. iteration 
+    cond_vreq_iter_tol  = 1e-1 # Stop iterating once dist from point log(thetavec) and theta 1vec is less than this tolerance
     
-    ''' Options related to the hyperparameters'''
-    
-    use_lkd_adj_mtd     = True # The adjoint method is more efficient than the forward method
-    
-    # Methods on how to initialize the optimization for 'max_lkd'
-    lkd_optz_start_avail = ['hp_best' 'lhs'] # hp_best requires the use of wellcond_mtd = 'precon'
-    lkd_optz_start       = 'hp_best' 
-    n_surr_hp_eval       = 40 # No. of points to calculate the lkd if lkd_optz_start = 'hp_best' 
-    
-    # Initial hyperparameters are used until the no. of eval is equal to this constant
-    n_eval_hp_const      = 1   
-    
-    # Initial hyperparamters values are used until n_eval > n_eval_hp_const
-    hp_theta_init        = 1e-2
-    hp_varK_init         = 1.0 # Used if varK is optimized numerically, ie not in closed form solution
-    hp_var_fval_init     = 0.0 
-    hp_var_fgrad_init    = 0.0
-
-    range_theta          = [1e-10, 1e24] 
-    range_varK           = [1e-24, 1e14] # Used if varK is optimized numerically (when there is noisy data)
-    range_var_fval       = [1e-8, 1e8]
-    range_var_fgrad      = [1e-8, 1e8]
-    
-    b_optz_hp_kernel     = True # Default is to optz the kernel hyperpara if there are any
-    
-    lkd_sigK_pnlt_use       = False
-    lkd_sigK_pnlty_lb_varf  = 0.1 # Min value for the variance of the evaluation of f
-    lkd_sigK_pnlt_c1        = 1.0
-    lkd_sigK_pnlt_c2        = 2.0
-
     ''' Initiate variables ''' 
     
-    b_use_data_scl   = None # Depends on wellcond_mtd
-    b_has_noisy_data = None
-    b_optz_var_fval  = None
-    b_optz_var_fgrad = None
+    b_optz_hp_kernel    = True # Default is to optz the kernel hyperpara if there are any
+    b_use_data_scl      = None # Depends on wellcond_mtd
+    b_has_noisy_data    = None
+    b_optz_var_fval     = None
+    b_optz_var_fgrad    = None
     
-    _cond_val        = np.nan
-    _cond_grad       = np.nan
+    _cond_val           = np.nan
+    _cond_grad          = np.nan
     
-    # Initial data    
-    _x_eval_in       = None
-    _fval_in         = None
-    _std_fval_in     = None
-    _grad_in         = None
-    _std_grad_in     = None
-    bvec_use_grad    = None
+    _x_eval_in          = None
+    _fval_in            = None
+    _std_fval_in        = None
+    _grad_in            = None
+    _std_grad_in        = None
+    bvec_use_grad       = None
     
     # Initiate timers
-    _time_chofac    = 0
+    _time_chofac        = 0
 
     def __init__(self, dim, use_grad,
                  kernel_type    = 'SqExp',
                  wellcond_mtd   = 'precon',
+                 mean_fun_type  = 'poly_ord_0',
                  path_data_surr = 'baye_data_surr',
                  surr_name      = 'obj_'):
         '''
@@ -184,7 +188,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
 
         ''' Set other parameters '''
         
-        self.set_mean_fun_op(mean_fun_type = 'poly_ord_0')
+        self.set_mean_fun_op(mean_fun_type = mean_fun_type)
 
         if self.wellcond_mtd == 'precon':
             self.b_use_cond_cstr = False
@@ -329,13 +333,13 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
                 dist_set     = vreq
             elif self.wellcond_mtd == 'req_vmin_frac':
                 x_scl_method = 'set_vmin'
-                dist_set     = vreq * self.vreq_frac
+                dist_set     = vreq * self.cond_vreq_frac
             elif self.wellcond_mtd == 'dflt_vmin':
                 x_scl_method = 'set_vmin'
-                dist_set     = self.dist_min_dflt
+                dist_set     = self.cond_dist_min_dflt
             elif self.wellcond_mtd == 'dflt_vmax':
                 x_scl_method = 'set_vmax'
-                dist_set     = self.dist_max_dflt
+                dist_set     = self.cond_dist_max_dflt
             else:
                 raise Exception(f'Unknown method wellcond_mtd = {self.wellcond_mtd}')
             

@@ -67,44 +67,44 @@ class GpHparaCon:
         if hp_optz_info.has_theta:
             if cstr_w_old_hp:
                 mean_log_theta = np.mean(np.log10(self.hp_theta_all[idx, :]))
-                hp_min, hp_max = calc_hp_range(np.log10(self.range_theta), mean_log_theta)
+                hp_min, hp_max = calc_hp_range(np.log10(self.hp_theta_range), mean_log_theta)
             else:
-                hp_min = self.range_theta[0]
-                hp_max = self.range_theta[1]
+                hp_min = self.hp_theta_range[0]
+                hp_max = self.hp_theta_range[1]
             
             para_min[hp_optz_info.idx_theta] = hp_min
             para_max[hp_optz_info.idx_theta] = hp_max
         
         if hp_optz_info.has_kernel:
-            para_min[hp_optz_info.idx_kernel] = self.range_hp_kernel[0]
-            para_max[hp_optz_info.idx_kernel] = self.range_hp_kernel[1]
+            para_min[hp_optz_info.idx_kernel] = self.hp_kernel_range[0]
+            para_max[hp_optz_info.idx_kernel] = self.hp_kernel_range[1]
         
         if hp_optz_info.has_varK:
-            if cstr_w_old_hp and (i_optz > (self.n_eval_hp_const + 1)):
-                hp_min, hp_max = calc_hp_range(np.log10(self.range_varK), np.log10(self.hp_varK_all[idx]))
+            if cstr_w_old_hp and (i_optz > (self.hp_const_n_eval + 1)):
+                hp_min, hp_max = calc_hp_range(np.log10(self.hp_varK_range), np.log10(self.hp_varK_all[idx]))
             else:
-                hp_min = self.range_varK[0]
-                hp_max = self.range_varK[1]
+                hp_min = self.hp_varK_range[0]
+                hp_max = self.hp_varK_range[1]
                 
             para_min[hp_optz_info.idx_varK] = hp_min
             para_max[hp_optz_info.idx_varK] = hp_max
         
         if hp_optz_info.has_var_fval:
-            if cstr_w_old_hp and (i_optz > (self.n_eval_hp_const + 1)):
-                hp_min, hp_max = calc_hp_range(np.log10(self.range_var_fval), np.log10(self.hp_var_fval_all[idx]))
+            if cstr_w_old_hp and (i_optz > (self.hp_const_n_eval + 1)):
+                hp_min, hp_max = calc_hp_range(np.log10(self.hp_var_fval_range), np.log10(self.hp_var_fval_all[idx]))
             else:
-                hp_min = self.range_var_fval[0]
-                hp_max = self.range_var_fval[1]
+                hp_min = self.hp_var_fval_range[0]
+                hp_max = self.hp_var_fval_range[1]
             
             para_min[hp_optz_info.idx_var_fval] = hp_min
             para_max[hp_optz_info.idx_var_fval] = hp_max
             
         if hp_optz_info.has_var_fgrad:
             if cstr_w_old_hp:
-                hp_min, hp_max = calc_hp_range(np.log10(self.range_var_fgrad), np.log10(self.hp_var_fgrad_all[idx]))
+                hp_min, hp_max = calc_hp_range(np.log10(self.hp_var_fgrad_range), np.log10(self.hp_var_fgrad_all[idx]))
             else:
-                hp_min = self.range_var_fgrad[0]
-                hp_max = self.range_var_fgrad[1]
+                hp_min = self.hp_var_fgrad_range[0]
+                hp_max = self.hp_var_fgrad_range[1]
             
             para_min[hp_optz_info.idx_var_fgrad] = hp_min
             para_max[hp_optz_info.idx_var_fgrad] = hp_max
@@ -126,7 +126,7 @@ class GpHparaCon:
 
         return para_min, para_max, hp_optz_bounds
 
-    def calc_cond_w_grad(self, Kmat_w_eta, Kmat_chofac, Kmat_grad_hp = None, condnum_norm = None):
+    def calc_cond_w_grad(self, Kmat_w_eta, Kmat_chofac, Kmat_grad_hp = None, cond_norm = None):
         '''
         Parameters
         ----------
@@ -137,20 +137,20 @@ class GpHparaCon:
         Kmat_grad_hp : 3D numpy array, optional
             Derivative of Kmat_w_eta with respect to the hyperparameters. 
             The default is None.
-        condnum_norm : int or float, optional
+        cond_norm : int or float, optional
             Indicates the type of norm to use to calculate the condition number. 
             The default is None.
         '''
         
-        if condnum_norm is None:
-            condnum_norm = self.condnum_norm
+        if cond_norm is None:
+            cond_norm = self.cond_norm
         
-        if condnum_norm == 2:
+        if cond_norm == 2:
             return self.calc_cond_L2_w_grad(Kmat_w_eta, Kmat_grad_hp)
-        elif condnum_norm == 'fro':
+        elif cond_norm == 'fro':
             return self.calc_cond_fronorm_w_grad(Kmat_w_eta, Kmat_chofac, Kmat_grad_hp)
         else:
-            raise Exception(f'condnum_norm must be either 2 or "fro" but it is {condnum_norm}')
+            raise Exception(f'cond_norm must be either 2 or "fro" but it is {cond_norm}')
         
     def calc_cond_L2_w_grad(self, Kmat_w_eta, Kmat_grad_hp = None):
         # assert Kmat_w_eta[0,0] > 1, 'Kmat_w_eta should have diagonal entries greater than 1 since it contains the noise'

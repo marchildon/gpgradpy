@@ -46,46 +46,72 @@ class GpInfo:
     def info_surr_options(self, print2screen=True):
 
         data2print = ('\nSurr options \n' + '-'*60 + '\n\n' +
-                      'Printing and saving data' +
-                      f'\n save_data_npz        = {self.save_data_npz}' +
-                      f'\n save_data_txt        = {self.save_data_txt}' +
-                      #
-                      '\n\nKernel options' +
+                      'Class inputs' +
+                      f'\n dim                  = {self.dim}' +
+                      f'\n use_grad             = {self.use_grad}' +
+                      f'\n wellcond_mtd         = {self.wellcond_mtd}' +
                       f'\n kernel_type          = {self.kernel_type}' +
-                      #
-                      '\n\nSub-optimization options' +
-                      f'\n optz_log_hp_theta    = {self.optz_log_hp_theta}' +
-                      f'\n optz_log_hp_var      = {self.optz_log_hp_var}'  +
-                      f'\n optz_log_hp_kernel   = {self.optz_log_hp_kernel}' +
-                      f'\n hp_optz_method       = {self.hp_optz_method}'  +
-                      f'\n n_surr_optz_start    = {self.n_surr_optz_start}'  +
-                      f'\n n_surr_optz_iter     = {self.n_surr_optz_iter}'  +
-                      f'\n hp_optz_obj_tol      = {self.hp_optz_obj_tol}'  +
-                      f'\n hp_optz_xtol         = {self.hp_optz_xtol}'  +
-                      #
-                      '\n\nWell-conditioning options' +
-                      f'\n wellcond_mtd         = {self.wellcond_mtd}'  + 
-                      f'\n set_eta_mtd_dflt     = {self.set_eta_mtd_dflt}'  + 
-                      f'\n cond_max             = {self.cond_max:.2e}'  +
-                      f'\n cond_max_target      = {self.cond_max_target:.2e}'  +
-                      f'\n cond_max_abs         = {self.cond_max_abs:.2e}'  +
-                      f'\n condnum_norm         = {self.condnum_norm}'  +
-                      f'\n min_nugget_dflt      = {self.min_nugget_dflt}'  +
-                      f'\n vreq_frac            = {self.vreq_frac}'  + 
-                      #
-                      '\n\nMethods for optimizing the hyperparameters' +
-                      f'\n n_eval_hp_const      = {self.n_eval_hp_const}' +
                       f'\n mean_fun_type        = {self.mean_fun_type}' +
+                      f'\n surr_name            = {self.surr_name}' +
                       #
                       f'\n b_has_noisy_data     = {self.b_has_noisy_data}' +
                       f'\n b_optz_var_fval      = {self.b_optz_var_fval}' +
                       f'\n b_optz_var_fgrad     = {self.b_optz_var_fgrad}' +
                       #
-                      '\n\nRange for the hyperparameters' +
-                      f'\n range_theta          = {self.range_theta[0]:.1e} - {self.range_theta[1]:.1e}' +
-                      f'\n range_hp_kernel      = {self.range_hp_kernel[0]:.1e} - {self.range_hp_kernel[1]:.1e}' +
-                      f'\n range_var_fval       = {self.range_var_fval[0]:.1e} - {self.range_var_fval[1]:.1e}' +
-                      f'\n range_var_fgrad      = {self.range_var_fgrad[0]:.1e} - {self.range_var_fgrad[1]:.1e}' +
+                      # 'Printing and saving data' +
+                      # f'\n save_data_npz        = {self.save_data_npz}' +
+                      # f'\n save_data_txt        = {self.save_data_txt}' +
+                      #
+                      '\n\nSub-optimization options' +
+                      f'\n optz_mtd             = {self.optz_mtd}'  +
+                      f'\n optz_n_x0            = {self.optz_n_x0}'  +
+                      f'\n optz_iter_max        = {self.optz_iter_max}'  +
+                      f'\n optz_tol_obj         = {self.optz_tol_obj}'  +
+                      f'\n optz_tol_x           = {self.optz_tol_x}'  +
+                      f'\n optz_log_hp_theta    = {self.optz_log_hp_theta}' +
+                      f'\n optz_log_hp_var      = {self.optz_log_hp_var}'  +
+                      f'\n optz_log_hp_kernel   = {self.optz_log_hp_kernel}' +
+                      #
+                      '\n\Marginal log-likelihood options' +
+                      f'\n lkd_optz_start_avail = {self.lkd_optz_start_avail}' +
+                      f'\n lkd_optz_start_mtd   = {self.lkd_optz_start_mtd}' +
+                      f'\n lkd_hp_best_n_eval   = {self.lkd_hp_best_n_eval}' +
+                      f'\n lkd_sigK_pnlt_use    = {self.lkd_sigK_pnlt_use}' +
+                      f'\n lkd_sigK_pnlt_lb_var = {self.lkd_sigK_pnlt_lb_var}' +
+                      f'\n lkd_sigK_pnlt_c1     = {self.lkd_sigK_pnlt_c1}' +
+                      f'\n lkd_sigK_pnlt_c2     = {self.lkd_sigK_pnlt_c2}' +
+                      #
+                      '\n\nHyperparameter options' +
+                      f'\n hp_const_n_eval      = {self.hp_const_n_eval}' +
+                      f'\n hp_theta_init        = {self.hp_theta_init}' +
+                      f'\n hp_varK_init         = {self.hp_varK_init}' +
+                      f'\n hp_kernel_init       = {self.hp_kernel_init}' +
+                      f'\n hp_var_fval_init     = {self.hp_var_fval_init}' +
+                      f'\n hp_var_fgrad_init    = {self.hp_var_fgrad_init}' +
+                      #
+                      f'\n hp_theta_range       = {self.hp_theta_range[0]:.1e} - {self.hp_theta_range[1]:.1e}' +
+                      f'\n hp_varK_range        = {self.hp_varK_range[0]:.1e} - {self.hp_varK_range[1]:.1e}' +
+                      f'\n hp_kernel_range      = {self.hp_kernel_range[0]:.1e} - {self.hp_kernel_range[1]:.1e}' +
+                      f'\n hp_var_fval_range    = {self.hp_var_fval_range[0]:.1e} - {self.hp_var_fval_range[1]:.1e}' +
+                      f'\n hp_var_fgrad_range   = {self.hp_var_fgrad_range[0]:.1e} - {self.hp_var_fgrad_range[1]:.1e}' +
+                      #
+                      '\n\nWell-conditioning options' +
+                      f'\n wellcond_mtd         = {self.wellcond_mtd}' + 
+                      #
+                      f'\n cond_eta_set_mtd     = {self.cond_eta_set_mtd}' + 
+                      f'\n cond_eta_is_const    = {self.cond_eta_is_const}' + 
+                      f'\n cond_eta_dflt        = {self.cond_eta_dflt}' + 
+                      #
+                      f'\n cond_max_target      = {self.cond_max_target:.2e}' +
+                      f'\n cond_max             = {self.cond_max:.2e}' +
+                      f'\n cond_max_abs         = {self.cond_max_abs:.2e}' +
+                      f'\n cond_norm            = {self.cond_norm}' +
+                      #
+                      f'\n cond_dist_min_dflt   = {self.cond_dist_min_dflt}' + 
+                      f'\n cond_dist_max_dflt   = {self.cond_dist_max_dflt}' + 
+                      f'\n cond_vreq_frac       = {self.cond_vreq_frac}' + 
+                      f'\n cond_vreq_max_iter   = {self.cond_vreq_max_iter}' + 
+                      f'\n cond_vreq_iter_tol   = {self.cond_vreq_iter_tol}' +
                       '\n\n')
 
         if print2screen:

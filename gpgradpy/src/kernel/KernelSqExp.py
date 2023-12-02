@@ -575,7 +575,7 @@ class KernelSqExpGradMod:
 class KernelSqExp(KernelSqExpBase, KernelSqExpGradMod):
 
     sq_exp_hp_kernel_default = None
-    sq_exp_range_hp_kernel   = [np.nan, np.nan]
+    sq_exp_hp_kernel_range   = [np.nan, np.nan]
 
     @staticmethod
     def sq_exp_theta2gamma(theta):

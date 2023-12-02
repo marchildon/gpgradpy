@@ -141,7 +141,7 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
             Iteration for the optimization of the hyperparameters.
         '''
         
-        if self.n_eval <= self.n_eval_hp_const:
+        if self.n_eval <= self.hp_const_n_eval:
             hp_vals        = self.get_init_hp_vals()
             surr_optz_info = None
             Rtensor        = self.get_scl_x_w_dist()[1]
@@ -157,10 +157,10 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
                 hp_vec, cond_val, surr_optz_info = self.optz_hp_max_lkd_req_vmin(i_optz)
                 time_hp_optz = time.time() - start_time
             else:
-                if self.lkd_optz_start == 'lhs':
+                if self.lkd_optz_start_mtd == 'lhs':
                     # Select points from a lhs
                     start_time = time.time() 
-                    hp_x0, optz_bound = self.get_hp_optz_x0(self.hp_info_optz_lkd, self.n_surr_optz_start)
+                    hp_x0, optz_bound = self.get_hp_optz_x0(self.hp_info_optz_lkd, self.optz_n_x0)
                     time_pick_hp0 = time.time() - start_time
                     
                     # Perform optiization starting at all points in hp_x0
@@ -168,7 +168,7 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
                     hp_vec, cond_val, surr_optz_info = self.optz_hp_max_lkd(hp_x0, optz_bound)
                     time_hp_optz = time.time() - start_time
                     
-                elif self.lkd_optz_start == 'hp_best':
+                elif self.lkd_optz_start_mtd == 'hp_best':
                     # Create several hp_val and select 1 to start the optz 
                     start_time = time.time() 
                     hp_best_init, optz_bound = self.get_hp_best_init(i_optz)
@@ -179,7 +179,7 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
                     hp_vec, cond_val, surr_optz_info = self.optz_hp_max_lkd(hp_best_init, optz_bound)
                     time_hp_optz = time.time() - start_time
                 else:
-                    raise Exception(f'Unknown option lkd_optz_start = {self.lkd_optz_start}')
+                    raise Exception(f'Unknown option lkd_optz_start_mtd = {self.lkd_optz_start_mtd}')
                     
             time_chofac = self._time_chofac
             

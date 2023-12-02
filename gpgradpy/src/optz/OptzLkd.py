@@ -135,11 +135,11 @@ class OptzLkd(CalcLkd):
         
         ''' Do optimization '''
         
-        hp_x0, optz_bound = self.get_hp_optz_x0(self.hp_info_optz_lkd, self.n_surr_optz_start)
+        hp_x0, optz_bound = self.get_hp_optz_x0(self.hp_info_optz_lkd, self.optz_n_x0)
         
         best_hp, cond_val, surr_optz_info = self.optz_hp_max_lkd(hp_x0, optz_bound)
         
-        max_iter      = self.max_vreq_optz_iter
+        max_iter      = self.cond_vreq_max_iter
         theta_all     = np.full((max_iter, self.dim), np.nan)
         dist2line_all = np.full(max_iter, np.nan)
         scale_vec_all = np.full((max_iter, self.dim), np.nan)
@@ -160,7 +160,7 @@ class OptzLkd(CalcLkd):
                 dist2line_all[cnt]   = est_dist2sol
                 scale_vec_all[cnt,:] = xvec_scale_new
                 
-                if (cnt == (max_iter - 1)) or (est_dist2sol < self.tol_dist2diag_vreq):
+                if (cnt == (max_iter - 1)) or (est_dist2sol < self.cond_vreq_iter_tol):
                     not_done = False
                 else:
                     x0_hp_vec = np.copy(best_hp)
@@ -209,17 +209,17 @@ class OptzLkd(CalcLkd):
         '''
         
         # For this optz problem 'SLSQP' work better and is faster than 'trust-constr'
-        if self.hp_optz_method == 'SLSQP':
-            optz_opt = {'ftol'      : self.hp_optz_obj_tol,
-                        'eps'       : self.hp_optz_xtol,
-                        'maxiter'   : self.n_surr_optz_iter,
+        if self.optz_mtd == 'SLSQP':
+            optz_opt = {'ftol'      : self.optz_tol_obj,
+                        'eps'       : self.optz_tol_x,
+                        'maxiter'   : self.optz_iter_max,
                         'disp'      : False}
         
-        elif self.hp_optz_method == 'trust-constr':
+        elif self.optz_mtd == 'trust-constr':
             optz_opt = {'initial_tr_radius' : 0.1,
-                        'xtol'              : self.hp_optz_xtol,
-                        'gtol'              : self.hp_optz_obj_tol,
-                        'maxiter'           : self.n_surr_optz_iter,
+                        'xtol'              : self.optz_tol_x,
+                        'gtol'              : self.optz_tol_obj,
+                        'maxiter'           : self.optz_iter_max,
                         'disp'              : False}
         
         ''' Setup arrays to track optz '''
@@ -264,7 +264,7 @@ class OptzLkd(CalcLkd):
             self._last_hp_vec = np.full((1, x0_i.size), np.nan)
 
             res = minimize(self.return_optz_val, x0_i,
-                           method      = self.hp_optz_method,
+                           method      = self.optz_mtd,
                            jac         = self.return_optz_grad,
                            bounds      = optz_bound,
                            constraints = nlc_method,

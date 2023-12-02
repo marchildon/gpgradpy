@@ -13,7 +13,7 @@ from gpgradpy.src import GaussianProcess
 
 ''' Set parameters '''
 
-use_lkd_adj_mtd   = True
+lkd_use_adj_mtd   = True
 lkd_sigK_pnlt_use = True
 
 # req_vmin is not setup for cases with noise on the objective or gradient 
@@ -123,7 +123,7 @@ def calc_GP_lkd_w_grad(GP, hp_vals1):
         calc_cond = True
         
     lkd_info        = GP.calc_lkd_all(hp_vals1, calc_cond = calc_cond, calc_grad = True, 
-                                      use_lkd_adj_mtd = use_lkd_adj_mtd)[0]
+                                      lkd_use_adj_mtd = lkd_use_adj_mtd)[0]
 
     lkd             = lkd_info.ln_lkd
     lkd_der         = lkd_info.ln_lkd_grad

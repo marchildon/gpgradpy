@@ -141,7 +141,7 @@ class GpHpara:
         def make_latin_hypercube(lb_vec, ub_vec):
             
             if lb_vec.size == 1:
-                # Vector of length n_surr_optz_start without nodes at the boundaries
+                # Vector of length n_points without nodes at the boundaries
                 hp_x0       = np.linspace(lb_vec[0], ub_vec[0], n_points+2)[1:-1,None]
             else:
                 para_limit  = np.array([lb_vec, ub_vec]).T
@@ -191,7 +191,7 @@ class GpHpara:
     
     def get_hp_best_init(self, i_optz):
         '''
-        Evaluate the marginal log-likelihood at self.n_surr_hp_eval different 
+        Evaluate the marginal log-likelihood at self.lkd_hp_best_n_eval different 
         hyperparameter values and identify the one that provides the maximium 
         likelihood. This is then the point that is returned and where the 
         optimization of the hyperparameters is initiated.
@@ -211,7 +211,7 @@ class GpHpara:
         
         calc_cond = False if self.wellcond_mtd == 'precon' else True
         
-        n_cases = self.n_surr_hp_eval
+        n_cases = self.lkd_hp_best_n_eval
         hp_x0, optz_bound = self.get_hp_optz_x0(self.hp_info_optz_lkd, n_cases, 
                                                 cstr_w_old_hp = True, i_optz = i_optz)
         
