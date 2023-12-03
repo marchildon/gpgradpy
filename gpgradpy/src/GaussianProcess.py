@@ -53,10 +53,10 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     lkd_hp_best_n_eval   = 40 # No. of points to calculate the lkd if lkd_optz_start_mtd = 'hp_best' 
     
     # Penalty to avoid having large values of sigK
-    lkd_sigK_pnlt_use    = False
-    lkd_sigK_pnlt_lb_var = 0.1 # Min value for the variance of the evaluation of f
-    lkd_sigK_pnlt_c1     = 1.0
-    lkd_sigK_pnlt_c2     = 2.0
+    lkd_varK_pnlt_use    = False
+    lkd_varK_pnlt_lb_var = 0.1 # Min value for the variance of the evaluation of f
+    lkd_varK_pnlt_c1     = 1.0
+    lkd_varK_pnlt_c2     = 3.0
     
     ''' Options related to the hyperparameters'''
     

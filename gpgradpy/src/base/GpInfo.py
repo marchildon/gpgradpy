@@ -76,10 +76,10 @@ class GpInfo:
                       f'\n lkd_optz_start_avail = {self.lkd_optz_start_avail}' +
                       f'\n lkd_optz_start_mtd   = {self.lkd_optz_start_mtd}' +
                       f'\n lkd_hp_best_n_eval   = {self.lkd_hp_best_n_eval}' +
-                      f'\n lkd_sigK_pnlt_use    = {self.lkd_sigK_pnlt_use}' +
-                      f'\n lkd_sigK_pnlt_lb_var = {self.lkd_sigK_pnlt_lb_var}' +
-                      f'\n lkd_sigK_pnlt_c1     = {self.lkd_sigK_pnlt_c1}' +
-                      f'\n lkd_sigK_pnlt_c2     = {self.lkd_sigK_pnlt_c2}' +
+                      f'\n lkd_varK_pnlt_use    = {self.lkd_varK_pnlt_use}' +
+                      f'\n lkd_varK_pnlt_lb_var = {self.lkd_varK_pnlt_lb_var}' +
+                      f'\n lkd_varK_pnlt_c1     = {self.lkd_varK_pnlt_c1}' +
+                      f'\n lkd_varK_pnlt_c2     = {self.lkd_varK_pnlt_c2}' +
                       #
                       '\n\nHyperparameter options' +
                       f'\n hp_const_n_eval      = {self.hp_const_n_eval}' +

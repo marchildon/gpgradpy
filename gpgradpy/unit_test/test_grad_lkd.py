@@ -14,7 +14,7 @@ from gpgradpy.src import GaussianProcess
 ''' Set parameters '''
 
 lkd_use_adj_mtd   = True
-lkd_sigK_pnlt_use = True
+lkd_varK_pnlt_use = True
 
 # req_vmin is not setup for cases with noise on the objective or gradient 
 wellcond_mtd_vec = [None, 'req_vmin', 'precon']
@@ -96,7 +96,7 @@ def setup_GP_wo_noise(wellcond_mtd, kernel_type):
     std_fgrad   = np.zeros(grad_eval.shape)
     GP_w0_noise = GaussianProcess(dim, use_grad, kernel_type, wellcond_mtd)
     
-    GP_w0_noise.lkd_sigK_pnlt_use = lkd_sigK_pnlt_use
+    GP_w0_noise.lkd_varK_pnlt_use = lkd_varK_pnlt_use
     GP_w0_noise.set_data(x_eval, obj_eval, std_fval, grad_eval, std_fgrad, bvec_use_grad)
     
     GP_w0_noise._etaK = eta_dflt
@@ -108,7 +108,7 @@ def setup_GP_w_noise(wellcond_mtd, kernel_type):
     std_fval   = std_fgrad = None
     GP_w_noise = GaussianProcess(dim, use_grad, kernel_type, wellcond_mtd)
     
-    GP_w_noise.lkd_sigK_pnlt_use = lkd_sigK_pnlt_use
+    GP_w_noise.lkd_varK_pnlt_use = lkd_varK_pnlt_use
     GP_w_noise.set_data(x_eval, obj_eval, std_fval, grad_eval, std_fgrad, bvec_use_grad)
     
     GP_w_noise._etaK = eta_dflt

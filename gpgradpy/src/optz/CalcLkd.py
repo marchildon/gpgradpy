@@ -75,7 +75,7 @@ class calcLkdWoNoise:
                                          KernGrad_hp)
                 
             if calc_lkd:
-                pnlt_val, pnlt_grad_wo_varK_grad = self.calc_lkd_sigK_pnlt(hp_varK, fval_scl)
+                pnlt_val, pnlt_grad_wo_varK_grad = self.calc_lkd_varK_pnlt(hp_varK, fval_scl)
                 
                 ln_det_Kern, ln_det_KernGrad = self.calc_detKmat(Kern_chofac, KernGrad_hp)
         
@@ -115,14 +115,14 @@ class calcLkdWoNoise:
             
         return varK, varK_grad
     
-    def calc_lkd_sigK_pnlt(self, varK, fval_vec):
+    def calc_lkd_varK_pnlt(self, varK, fval_vec):
         
-        if self.lkd_sigK_pnlt_use:
-            var_fval = np.max((np.var(fval_vec), self.lkd_sigK_pnlt_lb_var))
-            max_fun  = np.max((varK - self.lkd_sigK_pnlt_c2 * var_fval, 0))
+        if self.lkd_varK_pnlt_use:
+            var_fval = np.max((np.var(fval_vec), self.lkd_varK_pnlt_lb_var))
+            max_fun  = np.max((varK - self.lkd_varK_pnlt_c2 * var_fval, 0))
             
-            pnlt_val               = self.lkd_sigK_pnlt_c1 * max_fun**2
-            pnlt_grad_wo_varK_grad = 2* self.lkd_sigK_pnlt_c1 * max_fun
+            pnlt_val               = self.lkd_varK_pnlt_c1 * var_fval * max_fun**2
+            pnlt_grad_wo_varK_grad = 2 * self.lkd_varK_pnlt_c1 * var_fval * max_fun
         else:
             pnlt_val               = 0 
             pnlt_grad_wo_varK_grad = 0
@@ -159,7 +159,7 @@ class calcLkdWoNoise:
         varK        = np.max((varK_min, np.dot(res, invKern_res ) / denominator))
         
         # Calculate the penalty
-        pnlt_val, pnlt_grad_wo_varK_grad = self.calc_lkd_sigK_pnlt(varK, fval_vec)
+        pnlt_val, pnlt_grad_wo_varK_grad = self.calc_lkd_varK_pnlt(varK, fval_vec)
         
         # Calculate ln_detKmat 
         ln_det_Kern = 2*np.sum(np.log(np.diag(Kern_chofac[0])))
@@ -201,7 +201,7 @@ class calcLkdWNoise:
         class of type LkdInfo
         '''
         
-        # assert not(self.lkd_sigK_pnlt_use), 'Not yet setup to have lkd_sigK_pnlt_use be True'
+        # assert not(self.lkd_varK_pnlt_use), 'Not yet setup to have lkd_varK_pnlt_use be True'
         
         if lkd_use_adj_mtd is None:
             lkd_use_adj_mtd = self.lkd_use_adj_mtd
