@@ -126,11 +126,11 @@ class GpInfo:
         ''' Get the required data '''
 
         n_iter  = self.hp_varK_all.size
-        n_data  = 4 + self.b_optz_var_fval + self.b_optz_var_fgrad \
+        n_data  = 5 + self.b_optz_var_fval + self.b_optz_var_fgrad \
             + np.min((max_n_theta_print, self.dim)) \
             
         idx_vec = np.arange(n_iter)
-
+        
         ''' Organize the data '''
 
         headers   = [''] * n_data
@@ -140,18 +140,19 @@ class GpInfo:
         data[:,1] = self.hp_kernel_all
         data[:,2] = self.hp_beta_all[:,0] if (self.n_beta_coeff >= 1) else np.nan
         data[:,3] = self.hp_varK_all
-        idx       = 4
+        data[:,4] = self.varK_var_fval # Will not give useful data if the rescaled method is used
+        idx       = 5
 
-        headers[:4] = [' ', 'Kernel', 'Mu', 'sig2K']
+        headers[:idx] = [' ', 'Kernel', 'Mu', 'varK', 'varK / var_f']
 
         if self.b_optz_var_fval:
             data[:,idx]   = self.hp_var_fval_all
-            headers[idx] += 'sig fun'
+            headers[idx] += 'hp var fun'
             idx += 1
 
         if self.b_optz_var_fgrad:
             data[:,idx]   = self.hp_var_fgrad_all
-            headers[idx] += 'sig grad'
+            headers[idx] += 'hp var grad'
             idx += 1
             
         if self.dim <= max_n_theta_print: 
@@ -162,12 +163,12 @@ class GpInfo:
         else:
             theta_min          = np.min(self.hp_theta_all,  axis=1)
             theta_max          = np.max(self.hp_theta_all,  axis=1)
-            theta_mean         = np.mean(self.hp_theta_all, axis=1)
+            theta_median       = np.median(self.hp_theta_all, axis=1)
 
             data[:,idx]        = theta_min
             data[:,idx+1]      = theta_max
-            data[:,idx+2]      = theta_mean
-            headers[idx:idx+3] = ['theta min', 'theta max', 'theta mean']
+            data[:,idx+2]      = theta_median
+            headers[idx:idx+3] = ['theta min', 'theta max', 'theta median']
             idx += 3
 
         ''' Print and return the data '''

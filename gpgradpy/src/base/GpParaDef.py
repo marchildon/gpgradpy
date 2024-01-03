@@ -59,6 +59,10 @@ class GpParaDef:
         self.time_pick_hp0_all      = np.full(n_optz_max, np.nan)
         self.time_hp_optz_all       = np.full(n_optz_max, np.nan)
         self.time_chofac_all        = np.full(n_optz_max, np.nan)
+        
+        # Misc
+        self.var_fval               = np.full(n_optz_max, np.nan)
+        self.varK_var_fval          = np.full(n_optz_max, np.nan)
 
     def finish_optz_surr(self, n_optz_final):
         
@@ -103,6 +107,10 @@ class GpParaDef:
         self.time_pick_hp0_all      = self.time_pick_hp0_all[:idx]
         self.time_hp_optz_all       = self.time_hp_optz_all[:idx]
         self.time_chofac_all        = self.time_chofac_all[:idx]
+        
+        # Misc
+        self.var_fval               = self.var_fval[:idx]
+        self.varK_var_fval          = self.varK_var_fval[:idx]
 
     def load_data_surr(self, all_data=None):
         
@@ -155,6 +163,10 @@ class GpParaDef:
         self.time_pick_hp0_all[:idx]      = all_data[name + 'time_pick_hp0_all']
         self.time_hp_optz_all[:idx]       = all_data[name + 'time_hp_optz_all']
         self.time_chofac_all[:idx]        = all_data[name + 'time_chofac_all']
+        
+        # Misc
+        self.var_fval[:idx]               = all_data[name + 'var_fval']
+        self.varK_var_fval[:idx]          = all_data[name + 'varK_var_fval']
 
     def export_data_surr(self, save2file=True, file2save=None, file2save_old=None):
         
@@ -190,7 +202,11 @@ class GpParaDef:
                      #
                      name + 'time_pick_hp0_all'      : self.time_pick_hp0_all, 
                      name + 'time_hp_optz_all'       : self.time_hp_optz_all, 
-                     name + 'time_chofac_all'        : self.time_chofac_all}
+                     name + 'time_chofac_all'        : self.time_chofac_all,
+                     #
+                     name + 'var_fval'               : self.var_fval, 
+                     name + 'varK_var_fval'          : self.varK_var_fval
+                     }
 
         if save2file:
             if file2save     is None: file2save     = self.path_data_surr_npz
@@ -259,3 +275,7 @@ class GpParaDef:
             self.optz_n_cho_fail_all[idx]    = surr_optz_info['optz_n_cho_fail']
             self.optz_n_cond2big_all[idx]    = surr_optz_info['optz_n_cond2big']
             self.optz_max_init_cond_all[idx] = surr_optz_info['optz_max_init_cond']
+            
+        # Misc
+        self.var_fval[idx]      = np.var(self._fval_in)
+        self.varK_var_fval[idx] = self.hp_varK_all[idx] / self.var_fval[idx]
