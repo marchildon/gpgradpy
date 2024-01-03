@@ -234,11 +234,23 @@ def setup_plots():
 # Plot the scalled nuggets
 fig, ax = setup_plots()
 
-ax.plot(gamma_vec, eta_w_cond_l1 / eta_w_trace, '-r', label=r'$\eta$ from the $\ell_2$ condition number')
-ax.plot(gamma_vec, np.ones(n_gamma) * eta_Gaussian / eta_w_trace, '-b', label=r'Constant $\eta$: Gershgorin circle theorem')
-ax.plot(gamma_vec, eta_Gcircle_all / eta_w_trace, '-m', label=r'Variable $\eta$: Gershgorin circle theorem')
+ax.plot(gamma_vec, eta_w_cond_l1 / eta_w_trace, '-r', label=r'$\frac{\eta_{\ell_2}}{ \eta_{\mathrm{Tr}}}$')
+ax.plot(gamma_vec, np.ones(n_gamma) * eta_Gaussian / eta_w_trace, '-b', label=r'$\frac{\eta_{\mathrm{G circle, const}}}{\eta_{\mathrm{Tr}}}$')
+ax.plot(gamma_vec, eta_Gcircle_all / eta_w_trace, '-m', label=r'$\frac{\eta_{\mathrm{G circle, vary}}}{\eta_{\mathrm{Tr}}}$')
 # ax.plot(gamma_vec, eta_w_cond_l2, '-y', label='CondK l2')
-ax.plot(gamma_vec, eta_eig_all / eta_w_trace, '-g', label='Minimum required $\eta$')
+ax.plot(gamma_vec, eta_eig_all / eta_w_trace, '-g', label=r'$\frac{\eta_{\mathrm{min}}}{ \eta_{\mathrm{Tr}}}$')
+
+# ax.plot(gamma_vec, eta_w_cond_l1 / eta_w_trace, '-r', label=r'$\frac{\eta_{\ell_2}}{ \eta_{\mathrm{Tr}}}$')
+# ax.plot(gamma_vec, np.ones(n_gamma) * eta_Gaussian / eta_w_trace, '-b', label=r'$\eta_{\mathrm{G circle, const}} \, / \, \eta_{\mathrm{Tr}}$')
+# ax.plot(gamma_vec, eta_Gcircle_all / eta_w_trace, '-m', label=r'$\eta_{\mathrm{G circle, vary}} \, / \, \eta_{\mathrm{Tr}}$')
+# # ax.plot(gamma_vec, eta_w_cond_l2, '-y', label='CondK l2')
+# ax.plot(gamma_vec, eta_eig_all / eta_w_trace, '-g', label='$\eta_{\min} \, / \, \eta_{\mathrm{Tr}}$')
+
+# ax.plot(gamma_vec, eta_w_cond_l1 / eta_w_trace, '-r', label=r'$\eta$ from the $\ell_2$ condition number')
+# ax.plot(gamma_vec, np.ones(n_gamma) * eta_Gaussian / eta_w_trace, '-b', label=r'Constant $\eta$: Gershgorin circle theorem')
+# ax.plot(gamma_vec, eta_Gcircle_all / eta_w_trace, '-m', label=r'Variable $\eta$: Gershgorin circle theorem')
+# # ax.plot(gamma_vec, eta_w_cond_l2, '-y', label='CondK l2')
+# ax.plot(gamma_vec, eta_eig_all / eta_w_trace, '-g', label='Minimum required $\eta$')
 
 ax.set_yscale('linear')
 ax.set_ylabel(r'$\frac{\eta}{\eta_{\mathrm{tr}}}$', size=label_fs+3, rotation=0, labelpad = 10)
@@ -247,7 +259,7 @@ fig.tight_layout()
 ylim = ax.get_ylim()
 ax.plot([gamma_vec[idx_lkd_max], gamma_vec[idx_lkd_max]], ylim, 'c--')
 
-ax.legend(loc='center left', bbox_to_anchor=(0.01, 0.46, 0.5, 0.5))
+ax.legend(loc='center left', bbox_to_anchor=(0.01, 0.46, 0.5, 0.5), ncols=2, fontsize = 12)
 
 if save_fig:
     file_name = 'nugget_1d.png'

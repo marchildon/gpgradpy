@@ -20,19 +20,19 @@ from gpgradpy.src import GaussianProcess
 dim = 1
 
 # Other parameters
-n_eval          = 4     # No. of data points where the function is evaluated
-use_grad        = True
+n_eval          = 10     # No. of data points where the function is evaluated
+use_grad        = False
 kernel_type     = 'SqExp' # 'SqExp',' 'Maff2', 'RatQu'
 
 wellcond_mtd    = 'precon' # 'req_vmin' # 'req_vmin' # 'req_vmin' 'precon' None
 
 # Set range for hyperparameters
 n_theta         = 101
-range_gamma     = np.array([1e-1, 1e1])
+range_gamma     = np.array([1e-1, 1e3])
 gamma_vec       = np.logspace(np.log10(range_gamma[0]), np.log10(range_gamma[1]), n_theta) 
     
 # Plotting options
-save_fig        = True
+save_fig        = False
 plt_gamma_val   = False
 legend_loc      = 'upper center'
 surr_ylim       = [-3.5, 3.5]

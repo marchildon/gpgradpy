@@ -366,7 +366,7 @@ if False:
                 std_fval_scalar, std_grad_scalar)
 
 # Precon method with variable nugget
-if False:
+if True:
     use_grad          = True
     kernel_type_vec   = ['Ma5f2', 'RatQu']
     wellcond_mtd_vec  = ['precon', None]
