@@ -56,7 +56,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     lkd_varK_pnlt_use    = False
     lkd_varK_pnlt_lb_var = 0.1 # Min value for the variance of the evaluation of f
     lkd_varK_pnlt_c1     = 1.0
-    lkd_varK_pnlt_c2     = 3.0
+    lkd_varK_pnlt_c2     = 10.0
     
     ''' Options related to the hyperparameters'''
     
@@ -70,7 +70,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     hp_var_fval_init     = 0.0 
     hp_var_fgrad_init    = 0.0
 
-    hp_theta_range       = [1e-10, 1e24] 
+    hp_theta_range       = [1e-18 , 1e24] 
     hp_varK_range        = [1e-24, 1e14] # Used if varK is optimized numerically (when there is noisy data)
     hp_kernel_range      = [np.nan, np.nan]
     hp_var_fval_range    = [1e-8, 1e8]
@@ -249,7 +249,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         self.n_grad = n_grad
         self.n_data = n_eval + n_grad * self.dim
         
-        fval   = np.atleast_1d(fval).ravel()
+        fval = np.atleast_1d(fval).ravel()
         
         assert x_eval.ndim == 2, f'x_eval must be a 2 array but x_eval.ndim = {x_eval.ndim}'
         assert n_eval == fval.size, 'No. of points do not match with x_eval and fval'
