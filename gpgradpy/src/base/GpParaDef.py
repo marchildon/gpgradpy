@@ -278,4 +278,6 @@ class GpParaDef:
             
         # Misc
         self.var_fval[idx]      = np.var(self._fval_in)
-        self.varK_var_fval[idx] = self.hp_varK_all[idx] / self.var_fval[idx]
+        
+        if self.var_fval[idx] > 0:
+            self.varK_var_fval[idx] = self.hp_varK_all[idx] / self.var_fval[idx]
