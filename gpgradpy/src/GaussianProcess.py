@@ -136,6 +136,8 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     _std_grad_in        = None
     bvec_use_grad       = None
     
+    _vmin_req_grad      = np.nan
+    
     # Initiate timers
     _time_chofac        = 0
 
@@ -344,6 +346,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             
             if self.wellcond_mtd == 'rescale_origin':
                 dist_set = self.calc_mtd_rescale_origin_vreq(n_eval, self.dim)
+                self._vmin_req_grad = dist_set
                 x_scl_method = 'set_vmin'
             elif self.wellcond_mtd == 'rescale_eta_vary':
                 dist_set = self.vmin_rescale_eta_vary
