@@ -78,19 +78,28 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     
     ''' Options related to the ill-conditioning of the covariance matrix '''
     
-    # Ensures the gradient-enahnced correlation matrix is well-conditioned 
-    wellcond_mtd_avail  = [None,            # no method is used
-                           'req_vmin',      # ensure min dist is sufficiently large
-                           'req_vmin_frac', # use a vreq * cond_vreq_frac
-                           'precon',        # modify how the corr matrix is constructed 
-                           'dflt_vmin',     # set min xdist to cond_dist_min_dflt
-                           'dflt_vmax']     # set max xdist to cond_dist_max_dflt
+    # # Ensures the gradient-enahnced correlation matrix is well-conditioned 
+    # wellcond_mtd_avail  = [None,            # no method is used
+    #                        'req_vmin',      # ensure min dist is sufficiently large
+    #                        'req_vmin_frac', # use a vreq * cond_vreq_frac
+    #                        'precon',        # modify how the corr matrix is constructed 
+    #                        'dflt_vmin',     # set min xdist to cond_dist_min_dflt
+    #                        'dflt_vmax']     # set max xdist to cond_dist_max_dflt
     
-    cond_eta_set_mtd    = 'Kbase_eta' # Used if selected wellcond_mtd does not have a default method, ie wellcond_mtd == None
+    # Ensures the gradient-enahnced correlation matrix is well-conditioned 
+    wellcond_mtd_avail   = ['base',            # only use a positive nugget
+                           'precon',           # modify how the corr matrix is constructed 
+                           'rescale_origin',   # Rescaling method with vmin depending on nx and const eta
+                           'rescale_eta_vary', # Rescaling method with set v and variable eta
+                           'dflt_vmin',        # set min xdist to cond_dist_min_dflt
+                           'dflt_vmax']        # set max xdist to cond_dist_max_dflt
+    
+    
+    cond_eta_set_mtd      = 'Kbase_eta' # Used if selected wellcond_mtd does not have a default method, ie wellcond_mtd == 'base'
                                       # 'Kbase_eta' : Use req eta for Kbase, ie eta =  n_eval / (cond_max - 1)
                                       # 'Kbase_eta_w_dim' : Use eta =  n_eval (dim + 1) / (cond_max - 1)
                                       # 'dflt_eta'  : cond_eta_dflt is used
-    cond_eta_is_const   = True  # If False for the precon method then a variable nugget is used
+    cond_eta_is_const   = True  # If True eta is const, if False eta depends on the max sum of rows of abs(Kg)
     cond_eta_dflt       = 1e-8  # Default min nugget value if cond_eta_set_mtd == dflt_eta
     
 
@@ -103,10 +112,11 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     cond_dist_min_dflt  = 1     # Used if wellcond_mtd == dflt_vmin
     cond_dist_max_dflt  = 1     # Used if wellcond_mtd == dflt_vmax
     
-    # Options if wellcond_mtd == 'req_vmin' or 'req_vmin_frac'
-    cond_vreq_frac      = 0.1
-    cond_vreq_max_iter  = 5    # Max no. iteration 
-    cond_vreq_iter_tol  = 1e-1 # Stop iterating once dist from point log(thetavec) and theta 1vec is less than this tolerance
+    # Options if wellcond_mtd is a rescale method
+    # cond_vreq_frac      = 0.1
+    cond_vreq_max_iter    = 3    # Max no. iteration for hyperparameter optz
+    vmin_rescale_eta_vary = 1.0
+    cond_vreq_iter_tol    = 1e-1 # Stop iterating once dist from point log(thetavec) and theta 1vec is less than this tolerance
     
     ''' Initiate variables ''' 
     
@@ -166,12 +176,17 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         
         assert wellcond_mtd in self.wellcond_mtd_avail, \
             f'Requested method not available, wellcond_mtd : {wellcond_mtd}'
+            
+        if wellcond_mtd is None:
+            wellcond_mtd = 'base'
+        elif wellcond_mtd == 'rescale_eta_vary':
+            self.cond_eta_is_const = False
         
         self.dim      = dim
         self.use_grad = use_grad
         
         if use_grad is False:
-            wellcond_mtd = None
+            wellcond_mtd = 'base'
         
         self.wellcond_mtd    = wellcond_mtd
         self.path_data_surr  = path_data_surr
@@ -197,8 +212,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             self.condnum_nlc = NonlinearConstraint(self.return_cond_val, -np.inf, self.cond_max,
                                                    jac = self.return_cond_grad)
             
-        if ((self.wellcond_mtd == 'req_vmin') or (self.wellcond_mtd == 'req_vmin_frac') 
-            or (self.wellcond_mtd == 'dflt_vmin') or (self.wellcond_mtd == 'dflt_vmax')):
+        if ('rescale' in self.wellcond_mtd) or ('dflt_v' in self.wellcond_mtd):
             self.b_use_data_scl = True
         else:
             self.b_use_data_scl = False
@@ -243,7 +257,6 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         else:
             assert bvec_use_grad is None, 'bvec_use_grad must be None if grads are not used for the GP'
             n_grad = 0
-            
         
         self.n_eval = n_eval
         self.n_grad = n_grad
@@ -320,20 +333,21 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         self._etaK = self._eta_Kgrad if self.use_grad else self._eta_Kbase
         
         # Data related to rescaling to help with the condition number 
-        vreq = self.calc_vreq(n_eval, self.dim)
+        # vreq = self.calc_mtd_rescale_origin_vreq(n_eval, self.dim)
+        # self._vmin_req_grad = vreq
         
-        self._vmin_init     = self.calc_dist_min(x_eval)
-        self._vmin_req_grad = vreq
+        self._vmin_init = self.calc_dist_min(x_eval)
         
         self.setup_hp_idx4optz()
         
         if self.b_use_data_scl:
-            if self.wellcond_mtd == 'req_vmin':
+            
+            if self.wellcond_mtd == 'rescale_origin':
+                dist_set = self.calc_mtd_rescale_origin_vreq(n_eval, self.dim)
                 x_scl_method = 'set_vmin'
-                dist_set     = vreq
-            elif self.wellcond_mtd == 'req_vmin_frac':
+            elif self.wellcond_mtd == 'rescale_eta_vary':
+                dist_set = self.vmin_rescale_eta_vary
                 x_scl_method = 'set_vmin'
-                dist_set     = vreq * self.cond_vreq_frac
             elif self.wellcond_mtd == 'dflt_vmin':
                 x_scl_method = 'set_vmin'
                 dist_set     = self.cond_dist_min_dflt
@@ -348,7 +362,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         else:
             self.Rtensor_init = self.calc_Rtensor(x_eval, x_eval, 1)
             
-    def set_hpara(self, method2set_hp, i_optz, hp_vals = None):
+    def set_hpara(self, method2set_hp, i_optz, hp_vals = None, calc_cond = False):
         
         assert type(method2set_hp) is str, 'method2set_hp must be a string'
         
@@ -378,7 +392,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             raise Exception(f'Unknown method to set GP hp: method2set_hp = {method2set_hp}')
             
         # Setup for the evaluation of the model
-        self.setup_eval_model()
+        self.setup_eval_model(calc_cond = calc_cond)
     
     ''' Get initial and scaled data '''
     

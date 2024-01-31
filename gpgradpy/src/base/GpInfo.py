@@ -96,8 +96,6 @@ class GpInfo:
                       f'\n hp_var_fgrad_range   = {self.hp_var_fgrad_range[0]:.1e} - {self.hp_var_fgrad_range[1]:.1e}' +
                       #
                       '\n\nWell-conditioning options' +
-                      f'\n wellcond_mtd         = {self.wellcond_mtd}' + 
-                      #
                       f'\n cond_eta_set_mtd     = {self.cond_eta_set_mtd}' + 
                       f'\n cond_eta_is_const    = {self.cond_eta_is_const}' + 
                       f'\n cond_eta_dflt        = {self.cond_eta_dflt}' + 
@@ -109,7 +107,7 @@ class GpInfo:
                       #
                       f'\n cond_dist_min_dflt   = {self.cond_dist_min_dflt}' + 
                       f'\n cond_dist_max_dflt   = {self.cond_dist_max_dflt}' + 
-                      f'\n cond_vreq_frac       = {self.cond_vreq_frac}' + 
+                      # f'\n cond_vreq_frac       = {self.cond_vreq_frac}' + 
                       f'\n cond_vreq_max_iter   = {self.cond_vreq_max_iter}' + 
                       f'\n cond_vreq_iter_tol   = {self.cond_vreq_iter_tol}' +
                       '\n\n')

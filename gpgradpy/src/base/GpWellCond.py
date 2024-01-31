@@ -23,7 +23,7 @@ class GpWellCondVreq:
         Gradient-Enhanced Gaussian Covariance Matrix for Gaussian Processes
     '''
 
-    def calc_vreq(self, n_eval, dim = None):
+    def calc_mtd_rescale_origin_vreq(self, n_eval, dim = None):
         
         if dim is None:
             dim = self.dim 
@@ -53,7 +53,7 @@ class GpWellCondVreq:
             theta_sol     = hp_theta
             log_theta_sol = np.log10(hp_theta)
             
-        vreq = self.calc_vreq(n_eval, self.dim)
+        vreq = self.calc_mtd_rescale_origin_vreq(n_eval, self.dim)
         
         theta_star_v1   = 10**np.mean(log_theta_sol)
         
@@ -77,7 +77,7 @@ class GpWellCondVreq:
     def calc_nugget_Kfull_vreq(self, n_eval, vmin = None):
         
         if vmin is None:
-            vmin = self.calc_vreq(n_eval)
+            vmin = self.calc_mtd_rescale_origin_vreq(n_eval)
         
         cond_max = self.cond_max_target
         
@@ -120,7 +120,6 @@ class GpWellCond(GpWellCondVreq):
             if n_eval == 1:
                 eta_Kgrad = eta_Kbase
             elif self.wellcond_mtd == 'precon':
-                
                 dim = self.dim
                 
                 if self.kernel_type == 'SqExp' or self.kernel_type == 'RatQu' :
@@ -134,7 +133,7 @@ class GpWellCond(GpWellCondVreq):
                         
                 eta_Kgrad = (1 + ub_sum_off_diag) / (self.cond_max_target - 1)
                 
-            elif (self.wellcond_mtd == 'req_vmin') or (self.wellcond_mtd == 'req_vmin_frac'):
+            elif 'rescale' in self.wellcond_mtd:
                 eta_Kgrad = self.calc_nugget_Kfull_vreq(n_eval)
             else:
                 if self.cond_eta_set_mtd == 'Kbase_eta':

@@ -112,7 +112,7 @@ class OptzLkd(CalcLkd):
         cond_grad = self.calc_store_likelihood(hp_vec)[3]
         return cond_grad
 
-    def optz_hp_max_lkd_req_vmin(self, i_optz):
+    def optz_hp_max_lkd_mtd_rescale(self, i_optz):
         '''
         Parameters
         ----------
@@ -131,7 +131,7 @@ class OptzLkd(CalcLkd):
              Info on the optimization, see below for entries.
         '''
         
-        assert self.wellcond_mtd == 'req_vmin', f'Method should only be called for req_vmin, but it is wellcond_mtd = {self.wellcond_mtd}'
+        assert 'rescale' in self.wellcond_mtd, f'Method should only be called for the rescale methods, but it is wellcond_mtd = {self.wellcond_mtd}'
         
         ''' Do optimization '''
         

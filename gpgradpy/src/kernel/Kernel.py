@@ -219,9 +219,8 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         
         if self.wellcond_mtd == 'precon':
             
-            assert self.use_grad is True, 'self.wellcond_mtd should be None if use_grad is False'
+            assert self.use_grad is True, 'self.wellcond_mtd should be base if use_grad is False'
             
-            # P1, P1inv = self.calc_Kern_precon(self.n_eval, self.n_grad, theta)[:2]
             pvec    = np.sqrt(np.diag(Kern_w_noise))
             P       = np.diag(pvec)
             P_inv   = np.diag(1/pvec)
@@ -236,10 +235,6 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             
             Kcov_precon = varK * (Kcor + etaK * np.eye(n_data))
             Kcov        = P @ Kcov_precon @ P
-            # if b_normlz_w_varK:
-            #     Kcov_precon = 1.0 * (Kcor + etaK * np.eye(n_data))
-            # else:
-            #     Kcov_precon = varK * (Kcor + etaK * np.eye(n_data))
             
             if calc_cond:
                 condK = np.linalg.cond(Kcov_precon, p = self.cond_norm) 
@@ -253,16 +248,8 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
             
             if calc_chofac:
                 try:
-                    # if b_normlz_w_varK:
-                    #     Kcov_precon_chofac = cho_factor(Kcov_precon, lower = True)
-                    # else:
-                    #     Kcov_precon_chofac = cho_factor(varK * Kcov_precon, lower = True)
-                        
                     Kcov_precon_chofac = cho_factor(Kcov_precon, lower = True)
                     Kcov_chofac        = (P @ Kcov_precon_chofac[0], Kcov_precon_chofac[1])
-                    
-                    # Kcor_chofac = cho_factor(Kcor_w_eta, lower = True)
-                    # Kcov_chofac = (np.sqrt(sigK) * (P1 @ Kcor_chofac[0]), Kcor_chofac[1])
                 except:
                     Kcov_chofac = None
                     
@@ -276,7 +263,13 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
                 Kcov_chofac = None
                 
         else:
-            etaK = self._etaK
+            if self.cond_eta_is_const:
+                etaK = self._etaK
+            else:
+                sum_rows_Kern   = np.sum(np.abs(Kern), axis=1)
+                idx_etaK_argmax = np.argmax(sum_rows_Kern)
+                etaK            = sum_rows_Kern[idx_etaK_argmax] / (self.cond_max_target - 1)
+            
             Kcor = None
             Kcov = varK * (Kern_w_noise + etaK * np.eye(n_data))
         

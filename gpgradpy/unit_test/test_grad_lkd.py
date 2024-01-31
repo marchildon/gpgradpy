@@ -16,8 +16,8 @@ from gpgradpy.src import GaussianProcess
 lkd_use_adj_mtd   = True
 lkd_varK_pnlt_use = True
 
-# req_vmin is not setup for cases with noise on the objective or gradient 
-wellcond_mtd_vec = [None, 'req_vmin', 'precon']
+# rescale_origin is not setup for cases with noise on the objective or gradient 
+wellcond_mtd_vec = ['base', 'rescale_origin', 'rescale_eta_vary', 'precon']
 kernel_type_vec  = ['SqExp', 'Ma5f2', 'RatQu']
 
 # wellcond_mtd_vec = ['precon']
@@ -25,14 +25,20 @@ kernel_type_vec  = ['SqExp', 'Ma5f2', 'RatQu']
 
 eps      = 1e-8
 use_grad = True
+cond_eta_is_const = True
 
 # x_eval   = np.random.rand(10,1)
-x_eval = 3*np.array([[0., 0.], [1., 0.], [0., 1.], [1., 1.]])
+# x_eval = 3*np.array([[0., 0.], [1., 0.], [0., 1.], [1., 1.]])
+# x_eval = 3*np.array([[0., 0.], [1., 1.]])
+
+x_eval = 3*np.array([[0.], [1.]])
+
 
 n_eval, dim  = x_eval.shape
 n_der    = dim
 
-eta_dflt = 1e-1
+# eta_dflt = 1e-1
+cond_max_target = 1e5
 
 # Testing tolerances
 rtol    = 1e-4
@@ -99,7 +105,9 @@ def setup_GP_wo_noise(wellcond_mtd, kernel_type):
     GP_w0_noise.lkd_varK_pnlt_use = lkd_varK_pnlt_use
     GP_w0_noise.set_data(x_eval, obj_eval, std_fval, grad_eval, std_fgrad, bvec_use_grad)
     
-    GP_w0_noise._etaK = eta_dflt
+    # GP_w0_noise._etaK             = eta_dflt
+    GP_w0_noise.cond_max_target   = cond_max_target
+    GP_w0_noise.cond_eta_is_const = cond_eta_is_const
     
     return GP_w0_noise
 
@@ -111,7 +119,9 @@ def setup_GP_w_noise(wellcond_mtd, kernel_type):
     GP_w_noise.lkd_varK_pnlt_use = lkd_varK_pnlt_use
     GP_w_noise.set_data(x_eval, obj_eval, std_fval, grad_eval, std_fgrad, bvec_use_grad)
     
-    GP_w_noise._etaK = eta_dflt
+    # GP_w_noise._etaK             = eta_dflt
+    GP_w_noise.cond_max_target   = cond_max_target
+    GP_w_noise.cond_eta_is_const = cond_eta_is_const
     
     return GP_w_noise
 
@@ -126,7 +136,7 @@ def calc_GP_lkd_w_grad(GP, hp_vals1):
                                       lkd_use_adj_mtd = lkd_use_adj_mtd)[0]
 
     lkd             = lkd_info.ln_lkd
-    lkd_der         = lkd_info.ln_lkd_grad
+    lkd_der_code    = lkd_info.ln_lkd_grad
 
     ln_det_Kmat     = lkd_info.ln_det_Kmat
     ln_det_Kmat_der = lkd_info.ln_det_Kmat_grad
@@ -137,7 +147,7 @@ def calc_GP_lkd_w_grad(GP, hp_vals1):
     cond            = lkd_info.cond
     cond_der        = lkd_info.cond_grad
     
-    return (lkd, ln_det_Kmat, hp_beta, cond), (lkd_der, ln_det_Kmat_der, hp_beta_der, cond_der)
+    return (lkd, ln_det_Kmat, hp_beta, cond), (lkd_der_code, ln_det_Kmat_der, hp_beta_der, cond_der)
 
 ''' Check finite difference and analytical gradients '''
 
@@ -151,7 +161,7 @@ def calc_fd_lkd(GP_in, wellcond_mtd, kernel_type, hp_vals_in, idx_in, text2print
         hp_vals_wo_noise = make_hp_vals_wo_noise(GP_wo_noise, hp_kernel)
         
         ((lkd, ln_det_Kmat, hp_beta, cond), 
-         (lkd_der, ln_det_Kmat_der, hp_beta_der, cond_der)) \
+         (lkd_der_code, ln_det_Kmat_der, hp_beta_der, cond_der)) \
             = calc_GP_lkd_w_grad(GP_wo_noise, hp_vals_wo_noise)
     else:
         hp_kernel       = get_hp_kernel(kernel_type)
@@ -159,7 +169,7 @@ def calc_fd_lkd(GP_in, wellcond_mtd, kernel_type, hp_vals_in, idx_in, text2print
         hp_vals_w_noise = make_hp_vals_w_noise(GP_w_noise, hp_kernel)
 
         ((lkd, ln_det_Kmat, hp_beta, cond), 
-         (lkd_der, ln_det_Kmat_der, hp_beta_der, cond_der)) \
+         (lkd_der_code, ln_det_Kmat_der, hp_beta_der, cond_der)) \
             = calc_GP_lkd_w_grad(GP_w_noise, hp_vals_w_noise)
             
     if (hp_beta_der is not None) and (hp_beta_der.size > 0):
@@ -172,13 +182,13 @@ def calc_fd_lkd(GP_in, wellcond_mtd, kernel_type, hp_vals_in, idx_in, text2print
         ln_detKmat_der_diff = ln_det_Kmat_der[idx_in] - ln_detKmat_fd
         ln_detKmat_frac     = np.abs(ln_det_Kmat_der[idx_in]) / np.max((1e-16, ln_detKmat_fd))
     
-    lkd_fd           = (lkd_info_in.ln_lkd - lkd) / eps
-    lkd_der_diff     = lkd_der[idx_in] - lkd_fd
-    lkd_der_frac     = np.abs(lkd_der[idx_in]) / np.max((1e-16, lkd_fd))
+    lkd_der_fd        = (lkd_info_in.ln_lkd - lkd) / eps
+    lkd_der_code_diff = lkd_der_code[idx_in] - lkd_der_fd
+    lkd_der_code_frac = np.abs(lkd_der_code[idx_in]) / np.max((1e-16, lkd_der_fd))
     
-    # print(f'lkd     = {lkd}')
-    # print(f'lkd_der = {lkd_der}')
-    # print(f'lkd_fd  = {lkd_fd}')
+    # print(f'lkd = {lkd}')
+    # print(f'lkd_der_code = {lkd_der_code}')
+    # print(f'lkd_der_fd   = {lkd_der_fd}')
     
     if wellcond_mtd != 'precon':
         calc_cond    = True
@@ -192,20 +202,27 @@ def calc_fd_lkd(GP_in, wellcond_mtd, kernel_type, hp_vals_in, idx_in, text2print
         print('\n' + text2print)
         
         print(f'detK: exa der = {ln_det_Kmat_der[idx_in]:.3e}, fd = {ln_detKmat_fd:.3e}, der diff = {ln_detKmat_der_diff:.3e}')
-        print(f'Lkd:  exa der = {lkd_der[idx_in]:.3e}, fd = {lkd_fd:.3e}, der diff = {lkd_der_diff:.3e}')
+        print(f'Lkd:  exa der = {lkd_der_code[idx_in]:.3e}, fd = {lkd_der_fd:.3e}, der diff = {lkd_der_code_diff:.3e}')
         
         if calc_cond:
             print(f'Cond: exa der = {cond_der[idx_in]:.3e}, fd = {cond_fd:.3e}, der diff = {cond_fd_diff:.3e}')
         
-        print(f'ln_detKmat_frac = {ln_detKmat_frac:.3}, lkd_der_frac = {lkd_der_frac:.3}, cond_fd_frac = {cond_fd_frac:.3}')
+        print(f'ln_detKmat_frac = {ln_detKmat_frac:.3}, lkd_der_code_frac = {lkd_der_code_frac:.3}, cond_fd_frac = {cond_fd_frac:.3}')
     
         if hp_beta_der.size > 0:
             print(f'beta: exa der = {hp_beta_der[0,idx_in]:.3e}, fd = {beta_fd[0]:.3e}, der diff = {beta_der_diff:.3e}')
         
     if ln_det_Kmat_der is not None:
         np.testing.assert_allclose(ln_det_Kmat_der[idx_in], ln_detKmat_fd, rtol = rtol, atol = atol)
-        
-    np.testing.assert_allclose(lkd_der[idx_in],         lkd_fd,        rtol = rtol, atol = atol)
+    
+    print(f'\nwellcond_mtd = {wellcond_mtd}')
+    print(f'lkd_der_code = {lkd_der_code[idx_in]:.3e}, lkd_der_fd = {lkd_der_fd:.3e}')
+    np.testing.assert_allclose(lkd_der_code[idx_in], lkd_der_fd, rtol = rtol, atol = atol)
+    
+    # try:
+    #     np.testing.assert_allclose(lkd_der_code[idx_in], lkd_der_fd, rtol = rtol, atol = atol)
+    # except:
+    #     print('here')
     
     if calc_cond:
         np.testing.assert_allclose(cond_der[idx_in], cond_fd, rtol = rtol, atol = atol) 
@@ -236,7 +253,7 @@ class TestGrad(unittest.TestCase):
         
         for wellcond_mtd in wellcond_mtd_vec:
             
-            if wellcond_mtd == 'req_vmin':
+            if 'rescale' in wellcond_mtd:
                 continue
             
             for kernel_type in kernel_type_vec:
@@ -256,7 +273,7 @@ class TestGrad(unittest.TestCase):
         
         for wellcond_mtd in wellcond_mtd_vec:
             
-            if wellcond_mtd == 'req_vmin':
+            if 'rescale' in wellcond_mtd:
                 continue
             
             for kernel_type in kernel_type_vec:
@@ -276,7 +293,7 @@ class TestGrad(unittest.TestCase):
         
         for wellcond_mtd in wellcond_mtd_vec:
             
-            if wellcond_mtd == 'req_vmin':
+            if 'rescale' in wellcond_mtd:
                 continue
             
             for kernel_type in kernel_type_vec:
@@ -296,7 +313,7 @@ class TestGrad(unittest.TestCase):
         
         for wellcond_mtd in wellcond_mtd_vec:
             
-            if wellcond_mtd == 'req_vmin':
+            if 'rescale' in wellcond_mtd:
                 continue
             
             for kernel_type in kernel_type_vec:
@@ -312,5 +329,51 @@ class TestGrad(unittest.TestCase):
                 
                 calc_fd_lkd(GP_w_noise, wellcond_mtd, kernel_type, hp_vals_mod, idx, 'Hpara: var_fgrad w noise', b_noise_free)   
 
-if __name__ == '__main__':
-    unittest.main()
+# if __name__ == '__main__':
+#     unittest.main()
+
+# wellcond_mtd = 'rescale_eta_vary'
+# kernel_type  = 'SqExp'
+    
+# b_noise_free = True
+# GP_wo_noise  = setup_GP_wo_noise(wellcond_mtd, kernel_type)
+# hp_kernel    = get_hp_kernel(kernel_type)
+
+# hp_vals_mod           = make_hp_vals_wo_noise(GP_wo_noise, hp_kernel)
+# hp_vals_mod.theta[0] += eps
+
+# idx = np.min(GP_wo_noise.hp_info_optz_lkd.idx_theta)
+# calc_fd_lkd(GP_wo_noise, wellcond_mtd, kernel_type, hp_vals_mod, idx, 'Hpara: theta wo noise', b_noise_free)   
+
+wellcond_mtd = 'precon'
+kernel_type  = 'SqExp'
+cond_eta_is_const = True
+
+print(f'cond_eta_is_const = {cond_eta_is_const}')
+    
+b_noise_free = True
+GP_wo_noise  = setup_GP_wo_noise(wellcond_mtd, kernel_type)
+hp_kernel    = get_hp_kernel(kernel_type)
+
+hp_vals_mod           = make_hp_vals_wo_noise(GP_wo_noise, hp_kernel)
+hp_vals_mod.theta[0] += eps
+
+idx = np.min(GP_wo_noise.hp_info_optz_lkd.idx_theta)
+calc_fd_lkd(GP_wo_noise, wellcond_mtd, kernel_type, hp_vals_mod, idx, 'Hpara: theta wo noise', b_noise_free)   
+
+
+wellcond_mtd = 'precon'
+kernel_type  = 'SqExp'
+cond_eta_is_const = False
+
+print(f'cond_eta_is_const = {cond_eta_is_const}')
+    
+b_noise_free = True
+GP_wo_noise  = setup_GP_wo_noise(wellcond_mtd, kernel_type)
+hp_kernel    = get_hp_kernel(kernel_type)
+
+hp_vals_mod           = make_hp_vals_wo_noise(GP_wo_noise, hp_kernel)
+hp_vals_mod.theta[0] += eps
+
+idx = np.min(GP_wo_noise.hp_info_optz_lkd.idx_theta)
+calc_fd_lkd(GP_wo_noise, wellcond_mtd, kernel_type, hp_vals_mod, idx, 'Hpara: theta wo noise', b_noise_free)   

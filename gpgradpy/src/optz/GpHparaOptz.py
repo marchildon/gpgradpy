@@ -150,11 +150,11 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
         else:
             self._time_chofac = 0
             
-            if self.wellcond_mtd == 'req_vmin':
+            if 'rescale' in self.wellcond_mtd:
                 time_pick_hp0 = 0 
                 
                 start_time = time.time() 
-                hp_vec, cond_val, surr_optz_info = self.optz_hp_max_lkd_req_vmin(i_optz)
+                hp_vec, cond_val, surr_optz_info = self.optz_hp_max_lkd_mtd_rescale(i_optz)
                 time_hp_optz = time.time() - start_time
             else:
                 if self.lkd_optz_start_mtd == 'lhs':
