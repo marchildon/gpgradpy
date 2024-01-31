@@ -14,7 +14,7 @@ from . import GpMeanFun
 
 class GpEvalModel(GpMeanFun):
 
-    def setup_eval_model(self):
+    def setup_eval_model(self, calc_cond = False):
         
         '''
         Prior to using this method the methods set_data() and set_hpara() need 
@@ -36,20 +36,25 @@ class GpEvalModel(GpMeanFun):
         mean_fun_vec = self.make_data_vec(mean_fun_val, mean_fun_grad)
         data_vec     = self.make_data_vec(fval_scl, grad_scl)
         
-        Kern, Kcor, KernEta, KernEta_chofac, condK \
+        Kern, Kcor, KernEta, KernEta_chofac, condK, etaK \
             = self.calc_all_K_w_chofac(Rtensor, self.hp_vals, 
-                                       b_normlz_w_varK = True, calc_cond = False)[:5]
+                                       b_normlz_w_varK = True, calc_cond = calc_cond)[:6]
         
         f_diff = data_vec - mean_fun_vec
         
         ''' Store data '''
         
-        self.data_vec           = data_vec
-        self.Kern               = Kern
-        self.KernEta            = KernEta
-        self.KernEta_chofac     = KernEta_chofac
-        self.condK              = condK
-        self.invKernEta_fdiff   = linalg.cho_solve(KernEta_chofac, f_diff)
+        self.data_vec       = data_vec
+        self.Kern           = Kern
+        self.KernEta        = KernEta
+        self.KernEta_chofac = KernEta_chofac
+        self.condK          = condK
+        self.etaK_eval      = etaK
+        
+        if KernEta_chofac is None:
+            self.invKernEta_fdiff = None
+        else:
+            self.invKernEta_fdiff = linalg.cho_solve(KernEta_chofac, f_diff)
         
     def eval_model(self, x2model_in, calc_grad = False, calc_hess = False, squeeze_nx = False):
         '''
@@ -82,6 +87,8 @@ class GpEvalModel(GpMeanFun):
         '''
         
         ''' Check inputs '''
+        
+        assert self.KernEta_chofac is not None, 'To evaluate the surr the Cholesky decomposition is required'
         
         if x2model_in.ndim == 1:
             x2model = x2model_in[None,:]
