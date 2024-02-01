@@ -150,7 +150,7 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
         else:
             self._time_chofac = 0
             
-            if 'rescale' in self.wellcond_mtd:
+            if ('rescale' in self.wellcond_mtd) and (self.cond_vreq_max_iter > 1):
                 time_pick_hp0 = 0 
                 
                 start_time = time.time() 
