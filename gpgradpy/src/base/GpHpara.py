@@ -35,12 +35,28 @@ class GpHpara:
     
     def set_hp_from_idx(self, i_optz):
         
+        if np.isnan(self.hp_var_fval_all[i_optz]):
+            self.known_eps_fval = True
+            hp_var_fval = None
+        else:
+            self.known_eps_fval = False
+            hp_var_fval = self.hp_var_fval_all[i_optz]
+            
+        if np.isnan(self.hp_var_fgrad_all[i_optz]):
+            self.known_eps_fgrad = True
+            hp_var_fgrad = None
+        else:
+            self.known_eps_fgrad = False
+            hp_var_fgrad = self.hp_var_fgrad_all[i_optz]
+        
         hp_vals = self.make_hp_class(
-            self.hp_beta_all[i_optz,:],   self.hp_theta_all[i_optz,:], 
-            self.hp_kernel_all[i_optz],   self.hp_varK_all[i_optz], 
-            self.hp_var_fval_all[i_optz], self.hp_var_fgrad_all[i_optz])
+            self.hp_beta_all[i_optz,:], self.hp_theta_all[i_optz,:], 
+            self.hp_kernel_all[i_optz], self.hp_varK_all[i_optz], 
+            hp_var_fval,                hp_var_fgrad)
         
         self.hp_vals = hp_vals
+        
+        
         
     def hp_vec2dataclass(self, hp_optz_info, hp_vec):
         '''

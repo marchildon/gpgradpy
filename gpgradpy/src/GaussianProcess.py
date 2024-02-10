@@ -381,7 +381,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         '''
         
         if method2set_hp == 'stored':
-            assert i_optz > 0
+            assert i_optz >= 0
             self.set_hp_from_idx(i_optz)
         elif method2set_hp == 'optz':
             self.optz_hp(i_optz)
