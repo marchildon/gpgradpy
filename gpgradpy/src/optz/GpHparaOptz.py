@@ -34,7 +34,7 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
     HparaOptzInfo = HparaOptzInfo
     
     # Change to True to plot lkd, only works if dim == 2
-    _gp_optz_plt_lkd_bool = True
+    _gp_optz_plt_lkd_bool = False
     _gp_optz_plt_lkn_nvec = 10
     
     _fs_label = 12
