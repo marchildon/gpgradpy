@@ -9,6 +9,7 @@ Created on Sat Mar 13 10:52:48 2021
 from dataclasses import dataclass
 
 import numpy as np
+from scipy.optimize import Bounds
 from smt.sampling_methods import LHS
 
 
@@ -55,8 +56,6 @@ class GpHpara:
             hp_var_fval,                hp_var_fgrad)
         
         self.hp_vals = hp_vals
-        
-        
         
     def hp_vec2dataclass(self, hp_optz_info, hp_vec):
         '''
@@ -120,18 +119,106 @@ class GpHpara:
         hp_vals      = self.make_hp_class(beta, theta, kernel, varK, var_fval, var_fgrad)
         self.hp_vals = hp_vals
     
+    def get_hp_bounds_w_median(self, hp_optz_info, i_optz):
+        
+        idx_min  = int(np.max((0, i_optz - self.hp_median_n_idx)))
+        idx_max  = i_optz
+        factor   = self.hp_bound_factor
+        
+        para_min = np.full(hp_optz_info.n_hp, np.nan)
+        para_max = np.full(hp_optz_info.n_hp, np.nan)
+        # para_median = np.full(hp_optz_info.n_hp, np.nan)
+        
+        if hp_optz_info.has_theta:
+            median = np.median(self.hp_theta_all[idx_min:idx_max, :], axis=0)
+            para_min[hp_optz_info.idx_theta] = np.maximum(median / factor, self.hp_theta_range[0])
+            para_max[hp_optz_info.idx_theta] = np.minimum(median * factor, self.hp_theta_range[1])
+            
+            # para_median[hp_optz_info.idx_theta]     = np.median(self.hp_theta_all[idx_min:idx_max, :], axis=0)
+        
+        if hp_optz_info.has_kernel:
+            median = np.median(self.hp_kernel_all[idx_min:idx_max])
+            para_min[hp_optz_info.idx_kernel] = np.max((median / factor, self.hp_kernel_range[0]))
+            para_max[hp_optz_info.idx_kernel] = np.min((median * factor, self.hp_kernel_range[1]))
+            
+            # para_median[hp_optz_info.idx_kernel]    = np.median(self.hp_kernel_all[idx_min:idx_max])
+        
+        if hp_optz_info.has_varK:
+            median = np.median(self.hp_varK_all[idx_min:idx_max])
+            para_min[hp_optz_info.hp_varK_range] = np.max((median / factor, self.hp_varK_range[0]))
+            para_max[hp_optz_info.hp_varK_range] = np.min((median * factor, self.hp_varK_range[1]))
+            
+            # para_median[hp_optz_info.hp_varK_range] = np.median(self.hp_varK_all[idx_min:idx_max])
+            
+        if hp_optz_info.has_var_fval:
+            median = np.median(self.hp_var_fval_all[idx_min:idx_max])
+            para_min[hp_optz_info.idx_var_fval] = np.max((median / factor, self.hp_var_fval_range[0]))
+            para_max[hp_optz_info.idx_var_fval] = np.min((median * factor, self.hp_var_fval_range[1]))
+            
+            # para_median[hp_optz_info.idx_var_fval]  = np.median(self.hp_var_fval_all[idx_min:idx_max])
+            
+        if hp_optz_info.has_var_fgrad:
+            median = np.median(self.hp_var_fgrad_all[idx_min:idx_max])
+            para_min[hp_optz_info.idx_var_fgrad] = np.max((median / factor, self.hp_var_fgrad_range[0]))
+            para_max[hp_optz_info.idx_var_fgrad] = np.min((median * factor, self.hp_var_fgrad_range[1]))
+            
+            # para_median[hp_optz_info.idx_var_fgrad] = np.median(self.hp_var_fgrad_all[idx_min:idx_max])
+        
+        # Some hyperparameters are optimized with their log values
+        bvec = hp_optz_info.bvec_log_optz
+        para_min[bvec] = np.log10(para_min[bvec])
+        para_max[bvec] = np.log10(para_max[bvec])
+        
+        hp_optz_bounds = Bounds(para_min, para_max, keep_feasible=True)
+        
+        return para_min, para_max, hp_optz_bounds
+    
     ''' Bounds and initial starting points '''
 
-    def get_hp_optz_x0(self, hp_optz_info, n_points, magn_rand = 2.0, 
-                       cstr_w_old_hp = False, i_optz = None):
+    def get_hp_optz_x0(self, i_optz, hp_optz_info, n_x0):
         '''
-        Select n_points initial points for the optimization of the hyperparameters
+        Select n_x0 initial points for the optimization of the hyperparameters
+        
+        Parameters
+        ----------
+        i_optz : int, optional
+            Iteration for the optimization of the hyperparameters. 
+        hp_optz_info : HparaOptzInfo from the file GpHparaOptz
+            Holds info on what hyperparameters to optimize numerically.
+        n_x0 : int
+            Number of initial data points to get for the numerical optimization 
+            of the hyperparameters.
+            
+        Returns
+        -------
+        hp_x0 : 2D numpy array of floats
+            Each row is the initial solution for the optimization of the hyperparameters.
+        hp_optz_bounds : scipy.optimize.Bounds
+            Bound constraints for hp_x0
+        '''
+        
+        para_min, para_max, hp_optz_bounds = self.get_hp_bounds_w_median(hp_optz_info, i_optz)
+        
+        if para_min.size == 1:
+            # Vector of length n_x0 without nodes at the boundaries
+            hp_x0       = np.linspace(para_min[0], para_max[0], n_x0+2)[1:-1,None]
+        else:
+            para_limit  = np.array([para_min, para_max]).T
+            sampling    = LHS(xlimits=para_limit, random_state = 1)
+            hp_x0       = sampling(n_x0) 
+        
+        return hp_x0, hp_optz_bounds  
+
+    def get_hp_optz_x0_theta_diag(self, hp_optz_info, n_x0, magn_rand = 2.0, 
+                                  cstr_w_old_hp = False, i_optz = None):
+        '''
+        Select n_x0 initial points for the optimization of the hyperparameters
         
         Parameters
         ----------
         hp_optz_info : HparaOptzInfo from the file GpHparaOptz
             Holds info on what hyperparameters to optimize numerically.
-        n_points : int
+        n_x0 : int
             Number of initial data points to get for the numerical optimization 
             of the hyperparameters.
         magn_rand : float, optional
@@ -157,18 +244,18 @@ class GpHpara:
         def make_latin_hypercube(lb_vec, ub_vec):
             
             if lb_vec.size == 1:
-                # Vector of length n_points without nodes at the boundaries
-                hp_x0       = np.linspace(lb_vec[0], ub_vec[0], n_points+2)[1:-1,None]
+                # Vector of length n_x0 without nodes at the boundaries
+                hp_x0       = np.linspace(lb_vec[0], ub_vec[0], n_x0+2)[1:-1,None]
             else:
                 para_limit  = np.array([lb_vec, ub_vec]).T
                 sampling    = LHS(xlimits=para_limit, random_state = 1)
-                hp_x0       = sampling(n_points) 
+                hp_x0       = sampling(n_x0) 
             
             return hp_x0
             
         para_min, para_max, hp_optz_bounds \
             = self.get_hp_bounds(hp_optz_info, cstr_w_old_hp = cstr_w_old_hp, 
-                                 i_optz = i_optz)
+                                  i_optz = i_optz)
         
         if hp_optz_info.has_theta:
             idx_theta  = hp_optz_info.idx_theta
@@ -184,14 +271,14 @@ class GpHpara:
             para_max_mod       = para_max[bvec]
             hp_x0_init         = make_latin_hypercube(para_min_mod, para_max_mod)
             
-            hp_x0              = np.zeros((n_points, hp_optz_info.n_hp))
+            hp_x0              = np.zeros((n_x0, hp_optz_info.n_hp))
             hp_x0[:,bvec]      = hp_x0_init
             
             ''' Add randomness to theta around the diagonal th_1 = ... = th_d '''
             
             th_mean = hp_x0_init[:,min_idx_th]
             rng     = np.random.default_rng(seed=42)
-            th_all  = th_mean[:,None] + rng.normal(0, magn_rand, (n_points, self.dim))
+            th_all  = th_mean[:,None] + rng.normal(0, magn_rand, (n_x0, self.dim))
             
             # Enfource bounds for th
             th_min = para_min[min_idx_th]
@@ -201,7 +288,7 @@ class GpHpara:
             
             hp_x0[:,idx_theta] = th_all
         else:
-            hp_x0 = make_latin_hypercube(para_min, para_max, n_points)
+            hp_x0 = make_latin_hypercube(para_min, para_max, n_x0)
         
         return hp_x0, hp_optz_bounds        
     
@@ -228,8 +315,8 @@ class GpHpara:
         calc_cond = False if self.wellcond_mtd == 'precon' else True
         
         n_cases = self.lkd_hp_best_n_eval
-        hp_x0, optz_bound = self.get_hp_optz_x0(self.hp_info_optz_lkd, n_cases, 
-                                                cstr_w_old_hp = True, i_optz = i_optz)
+        hp_x0, optz_bound = self.get_hp_optz_x0_theta_diag(self.hp_info_optz_lkd, n_cases, 
+                                                           cstr_w_old_hp = True, i_optz = i_optz)
         
         ln_lkd_all = np.full(n_cases, np.nan)
         cond_all   = np.full(n_cases, np.nan)

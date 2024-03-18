@@ -83,6 +83,9 @@ class GpInfo:
                       #
                       '\n\nHyperparameter options' +
                       f'\n hp_const_n_eval      = {self.hp_const_n_eval}' +
+                      f'\n hp_bound_factor      = {self.hp_bound_factor}' +
+                      f'\n hp_median_n_idx      = {self.hp_median_n_idx}' +
+                      #
                       f'\n hp_theta_init        = {self.hp_theta_init}' +
                       f'\n hp_varK_init         = {self.hp_varK_init}' +
                       f'\n hp_kernel_init       = {self.hp_kernel_init}' +

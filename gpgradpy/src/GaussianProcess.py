@@ -17,7 +17,6 @@ from .base   import GpHpara
 from .base   import GpParaDef
 from .base   import GpWellCond
 
-
 from .eval   import GpEvalModel
 from .kernel import Kernel
 from .optz   import GpHparaOptz
@@ -62,6 +61,8 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     
     # Initial hyperparameters are used until the no. of eval is equal to this constant
     hp_const_n_eval      = 1   
+    hp_bound_factor      = 1e3 # Used to set lb and ub for hyperparameter at each iteration
+    hp_median_n_idx      = 5 # No. of past iterations to consider to calculate the median of the hp
     
     # Initial hyperparamters values are used until n_eval > hp_const_n_eval
     hp_theta_init        = 1e-2
