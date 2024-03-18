@@ -33,6 +33,13 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
     
     HparaOptzInfo = HparaOptzInfo
     
+    # Change to True to plot lkd, only works if dim == 2
+    _gp_optz_plt_lkd_bool = True
+    _gp_optz_plt_lkn_nvec = 10
+    
+    _fs_label = 12
+    _fs_tick  = 10
+    
     def set_hp_optz_info(self, has_theta, 
                          has_kernel   = False, has_varK      = False, 
                          has_var_fval = False, has_var_fgrad = False):
@@ -154,40 +161,42 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
                 time_pick_hp0 = 0 
                 
                 start_time = time.time() 
-                hp_vec, cond_val, surr_optz_info = self.optz_hp_max_lkd_mtd_rescale(i_optz)
+                hp_optz, cond_val, surr_optz_info = self.optz_hp_max_lkd_mtd_rescale(i_optz)
                 time_hp_optz = time.time() - start_time
             else:
                 if self.lkd_optz_start_mtd == 'lhs':
                     # Select points from a lhs
                     start_time = time.time() 
-                    hp_x0, optz_bound = self.get_hp_optz_x0(self.hp_info_optz_lkd, self.optz_n_x0)
+                    hp_x0, optz_bound = self.get_hp_optz_x0(i_optz, self.hp_info_optz_lkd, self.optz_n_x0)
                     time_pick_hp0 = time.time() - start_time
                     
                     # Perform optiization starting at all points in hp_x0
                     start_time = time.time() 
-                    hp_vec, cond_val, surr_optz_info = self.optz_hp_max_lkd(hp_x0, optz_bound)
+                    hp_optz, cond_val, surr_optz_info = self.optz_hp_max_lkd(hp_x0, optz_bound)
                     time_hp_optz = time.time() - start_time
                     
                 elif self.lkd_optz_start_mtd == 'hp_best':
                     # Create several hp_val and select 1 to start the optz 
                     start_time = time.time() 
-                    hp_best_init, optz_bound = self.get_hp_best_init(i_optz)
+                    hp_x0, optz_bound = self.get_hp_best_init(i_optz)
                     time_pick_hp0 = time.time() - start_time
                     
-                    # Perform optimization starting at hp_best_init
+                    # Perform optimization starting at hp_x0
                     start_time = time.time() 
-                    hp_vec, cond_val, surr_optz_info = self.optz_hp_max_lkd(hp_best_init, optz_bound)
+                    hp_optz, cond_val, surr_optz_info = self.optz_hp_max_lkd(hp_x0, optz_bound)
                     time_hp_optz = time.time() - start_time
                 else:
                     raise Exception(f'Unknown option lkd_optz_start_mtd = {self.lkd_optz_start_mtd}')
                     
+                if self._gp_optz_plt_lkd_bool:
+                    self.plt_debug_lkd(i_optz, optz_bound, hp_x0, hp_optz)
+                        
             time_chofac = self._time_chofac
-            
-            hp_vals = self.hp_vec2dataclass(self.hp_info_optz_lkd, hp_vec)
+            hp_vals     = self.hp_vec2dataclass(self.hp_info_optz_lkd, hp_optz)
             
             # Optimize closed form hyperparameter and add them to hp_vals
             hp_vals = self.optz_closed_form_hp(hp_vals)
-                
+        
         self.store_new_para_surr(i_optz, hp_vals, surr_optz_info, cond_val, 
                                  time_hp_optz, time_chofac, time_pick_hp0)
 
@@ -235,4 +244,63 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
             hp_vals.varK = lkd_info.hp_varK
             
         return hp_vals
+    
+    
+    def plt_debug_lkd(self, i_optz, optz_bound, hp_x0, hp_optz):
+        
+        import matplotlib.pyplot as plt
+        # optz_bound, hp_x0, hp_vec
+        
+        n_gamma = self._gp_optz_plt_lkn_nvec
+        
+        ''' Calculations '''
+        n_gamma   = 10
+        vec0 = np.log10(np.logspace(optz_bound.lb[0], optz_bound.ub[0], n_gamma))
+        vec1 = np.log10(np.logspace(optz_bound.lb[1], optz_bound.ub[1], n_gamma))
+        Xmat_para, Ymat_para = np.meshgrid(vec0, vec1)
+        
+        lkd_val = np.zeros((n_gamma, n_gamma))
+        
+        for i in range(n_gamma):
+            for j in range(n_gamma):
+                hp_vec_i = np.array([Xmat_para[i,j], Ymat_para[i,j]])
+                
+                lkd_val[i,j] = self.calc_store_likelihood(hp_vec_i, calc_grad = False)[0]
+                
+        min_lkd = np.nanmin(lkd_val)
+        max_lkd = np.nanmax(lkd_val)
+        
+        lkd_val = (lkd_val - min_lkd) / (max_lkd - min_lkd)
+        
+        ''' Plot '''
+        fig, ax = plt.subplots(figsize=(4, 4))
+        
+        ax.set_title(f'i optz = {i_optz}')
+
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        
+        ax.set_xlabel(r'$\gamma_1$', size = self._fs_label)
+        ax.set_ylabel(r'$\gamma_2$', size = self._fs_label, rotation = 0)
+        
+        ax.grid(True)
+        ax.tick_params(axis = 'both', which = 'major', labelsize = self._fs_tick)
+        ax.set_aspect('equal', adjustable = 'box')
+        
+        # if self.para_tick_loc is not None:
+        #     ax.set_xticks(self.para_tick_loc)
+        #     ax.set_yticks(self.para_tick_loc)
+        
+        Xmat_para = 10**Xmat_para
+        Ymat_para = 10**Ymat_para
+        
+        cs = ax.contourf(Xmat_para, Ymat_para, lkd_val, cmap = 'viridis')
+        
+        ax.plot(10**hp_x0[:,0], 10**hp_x0[:,1], 'rs')
+        ax.plot(10**hp_optz[0], 10**hp_optz[1], 'm*')
+        
+        fig.colorbar(cs)
+        
+        fig.tight_layout()
+        plt.show() 
     
