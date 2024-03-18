@@ -13,7 +13,7 @@ from . import CalcLkd
 
 class OptzLkd(CalcLkd):
     
-    def calc_store_likelihood(self, hp_vec, always_calc_cond = False):
+    def calc_store_likelihood(self, hp_vec, always_calc_cond = False, calc_grad = True):
         '''
         -Evaluate the following:
             the marginal log-likelihood (lkd)
@@ -52,24 +52,25 @@ class OptzLkd(CalcLkd):
             
             lkd_info, b_chofac_good \
                 = self.calc_lkd_all(hp_vals, calc_lkd = True, 
-                                    calc_cond = calc_cond, calc_grad = True)
+                                    calc_cond = calc_cond, calc_grad = calc_grad)
             
-            cond_val    = lkd_info.cond
-            cond_grad   = lkd_info.cond_grad
+            cond_val  = lkd_info.cond
+            cond_grad = lkd_info.cond_grad
             
             if b_chofac_good:
                 ln_lkd_val  = lkd_info.ln_lkd 
                 ln_lkd_grad = lkd_info.ln_lkd_grad
                 
                 # Adjust gradients for terms being optimized with respect to their log values
-                bvec            = self.hp_info_optz_lkd.bvec_log_optz
-                log_hp          = hp_vec[bvec]
-                transformation  = 10**log_hp * np.log(10)
+                if calc_grad:
+                    bvec            = self.hp_info_optz_lkd.bvec_log_optz
+                    log_hp          = hp_vec[bvec]
+                    transformation  = 10**log_hp * np.log(10)
+                    
+                    ln_lkd_grad[bvec] *= transformation
                 
-                ln_lkd_grad[bvec] *= transformation
-                
-                if self.b_use_cond_cstr:
-                    cond_grad[bvec] *= transformation
+                    if self.b_use_cond_cstr:
+                        cond_grad[bvec] *= transformation
             else:
                 # If the Cholesky decomposition fails use the condition number as the obj
                 ln_lkd_val  = -cond_val
