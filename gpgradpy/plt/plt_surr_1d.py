@@ -11,7 +11,7 @@ from os import path
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 
-from SurrPlt import SurrPlt
+from gpgradpy.plt import SurrPlt
 from gpgradpy.src import GaussianProcess  
     
 ''' Set options '''
@@ -20,7 +20,7 @@ from gpgradpy.src import GaussianProcess
 dim = 1
 
 # Other parameters
-n_eval          = 10     # No. of data points where the function is evaluated
+n_eval          = 4     # No. of data points where the function is evaluated
 use_grad        = False
 kernel_type     = 'SqExp' # 'SqExp',' 'Maff2', 'RatQu'
 

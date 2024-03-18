@@ -251,6 +251,9 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
                     Kcov_precon_chofac = cho_factor(Kcov_precon, lower = True)
                     Kcov_chofac        = (P @ Kcov_precon_chofac[0], Kcov_precon_chofac[1])
                 except:
+                    n_nan = np.sum(np.isnan(Kcov_precon))
+                    print(f'Failure of the Cholesky decomposition, n_nan = {n_nan}')
+                    
                     Kcov_chofac = None
                     
                     eig_val = np.linalg.eigvalsh(Kcov_precon)

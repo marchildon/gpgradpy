@@ -54,7 +54,7 @@ class SurrPlt:
         
         # Plot the exa sol and evaluation points
         if b_plt_exact:
-            ax.plot(x_model, obj_exa, 'k-', label='Exact')
+            ax.plot(x_model, obj_exa, 'k-', label=r'$f(x)$')
             
         if b_plt_fmin:
             idx_fmin = np.argmin(obj_exa)
