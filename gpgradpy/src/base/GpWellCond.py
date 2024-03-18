@@ -114,38 +114,41 @@ class GpWellCond(GpWellCondVreq):
     
     def calc_nugget(self, n_eval):
         
-        eta_Kbase = self.calc_nugget_Kbase(n_eval)
-        
-        if self.use_grad:
-            if n_eval == 1:
-                eta_Kgrad = eta_Kbase
-            elif self.wellcond_mtd == 'precon':
-                dim = self.dim
-                
-                if self.kernel_type == 'SqExp' or self.kernel_type == 'RatQu' :
-                    ub_sum_off_diag = 0.5*(n_eval - 1) * (1 + np.sqrt(1 + 4*dim)) \
-                        * np.exp(-(1 + 2*dim - np.sqrt(1 + 4*dim)) / (4*dim))
-                elif self.kernel_type == 'Ma5f2':
-                    alpha           = (np.sqrt(3*dim) - 1 + np.sqrt(15*dim + 2*np.sqrt(3*dim) +1)) / (2*(3*dim + np.sqrt(3*dim)))
-                    ub_sum_off_diag = (n_eval - 1) * (1 + (dim + np.sqrt(3*dim)) * alpha + dim*(1 + np.sqrt(3*dim))*alpha**2) * np.exp(-np.sqrt(3*dim) * alpha)
-                else:
-                    raise Exception(f'Unknown kernel of {self.kernel_type}, needs to be added')
-                        
-                eta_Kgrad = (1 + ub_sum_off_diag) / (self.cond_max_target - 1)
-                
-            elif 'rescale' in self.wellcond_mtd:
-                eta_Kgrad = self.calc_nugget_Kfull_vreq(n_eval)
-            else:
-                if self.cond_eta_set_mtd == 'Kbase_eta':
-                    eta_Kgrad = eta_Kbase
-                elif self.cond_eta_set_mtd == 'Kbase_eta_w_dim':
-                    eta_Kgrad = eta_Kbase * (self.dim + 1)
-                elif self.cond_eta_set_mtd == 'dflt_eta':
-                    eta_Kgrad = self.cond_eta_dflt
-                else:
-                    raise Exception(f'Uknown method for cond_eta_set_mtd = {self.cond_eta_set_mtd}')
+        if self.cond_eta_set_mtd == 'dflt_eta':
+            eta_Kbase = eta_Kgrad = self.cond_eta_dflt
         else:
-            eta_Kgrad = np.nan
+            eta_Kbase = self.calc_nugget_Kbase(n_eval)
+            
+            if self.use_grad:
+                if n_eval == 1:
+                    eta_Kgrad = eta_Kbase
+                elif self.wellcond_mtd == 'precon':
+                    dim = self.dim
+                    
+                    if self.kernel_type == 'SqExp' or self.kernel_type == 'RatQu' :
+                        ub_sum_off_diag = 0.5*(n_eval - 1) * (1 + np.sqrt(1 + 4*dim)) \
+                            * np.exp(-(1 + 2*dim - np.sqrt(1 + 4*dim)) / (4*dim))
+                    elif self.kernel_type == 'Ma5f2':
+                        alpha           = (np.sqrt(3*dim) - 1 + np.sqrt(15*dim + 2*np.sqrt(3*dim) +1)) / (2*(3*dim + np.sqrt(3*dim)))
+                        ub_sum_off_diag = (n_eval - 1) * (1 + (dim + np.sqrt(3*dim)) * alpha + dim*(1 + np.sqrt(3*dim))*alpha**2) * np.exp(-np.sqrt(3*dim) * alpha)
+                    else:
+                        raise Exception(f'Unknown kernel of {self.kernel_type}, needs to be added')
+                            
+                    eta_Kgrad = (1 + ub_sum_off_diag) / (self.cond_max_target - 1)
+                    
+                elif 'rescale' in self.wellcond_mtd:
+                    eta_Kgrad = self.calc_nugget_Kfull_vreq(n_eval)
+                else:
+                    if self.cond_eta_set_mtd == 'Kbase_eta':
+                        eta_Kgrad = eta_Kbase
+                    elif self.cond_eta_set_mtd == 'Kbase_eta_w_dim':
+                        eta_Kgrad = eta_Kbase * (self.dim + 1)
+                    elif self.cond_eta_set_mtd == 'dflt_eta':
+                        eta_Kgrad = self.cond_eta_dflt
+                    else:
+                        raise Exception(f'Uknown method for cond_eta_set_mtd = {self.cond_eta_set_mtd}')
+            else:
+                eta_Kgrad = np.nan
             
         return eta_Kbase, eta_Kgrad
     
