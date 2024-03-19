@@ -57,7 +57,10 @@ class GpHparaCon:
         
         if cstr_w_old_hp:
             assert 0 < range_frac < 1, f'Must have 0 < range_frac < 1 but range_frac = {range_frac}'
-            idx = i_optz - 1
+            # idx = i_optz - 1
+            
+            idx_min = int(np.max((0, i_optz - self.hp_median_n_idx)))
+            idx_max = i_optz
         
         ''' Set parameters limits '''
 
@@ -66,7 +69,7 @@ class GpHparaCon:
         
         if hp_optz_info.has_theta:
             if cstr_w_old_hp:
-                mean_log_theta = np.mean(np.log10(self.hp_theta_all[idx, :]))
+                mean_log_theta = np.median(np.log10(self.hp_theta_all[idx_min:idx_max, :]))
                 hp_min, hp_max = calc_hp_range(np.log10(self.hp_theta_range), mean_log_theta)
             else:
                 hp_min = self.hp_theta_range[0]
@@ -81,7 +84,8 @@ class GpHparaCon:
         
         if hp_optz_info.has_varK:
             if cstr_w_old_hp and (i_optz > (self.hp_const_n_eval + 1)):
-                hp_min, hp_max = calc_hp_range(np.log10(self.hp_varK_range), np.log10(self.hp_varK_all[idx]))
+                mean_old_varK  = np.log10(np.median(self.hp_varK_all[idx_min:idx_max]))
+                hp_min, hp_max = calc_hp_range(np.log10(self.hp_varK_range), mean_old_varK)
             else:
                 hp_min = self.hp_varK_range[0]
                 hp_max = self.hp_varK_range[1]
@@ -91,7 +95,8 @@ class GpHparaCon:
         
         if hp_optz_info.has_var_fval:
             if cstr_w_old_hp and (i_optz > (self.hp_const_n_eval + 1)):
-                hp_min, hp_max = calc_hp_range(np.log10(self.hp_var_fval_range), np.log10(self.hp_var_fval_all[idx]))
+                mean_old_hp_fval = np.log10(np.median(self.hp_var_fval_all[idx_min:idx_max]))
+                hp_min, hp_max   = calc_hp_range(np.log10(self.hp_var_fval_range), mean_old_hp_fval)
             else:
                 hp_min = self.hp_var_fval_range[0]
                 hp_max = self.hp_var_fval_range[1]
@@ -101,7 +106,8 @@ class GpHparaCon:
             
         if hp_optz_info.has_var_fgrad:
             if cstr_w_old_hp:
-                hp_min, hp_max = calc_hp_range(np.log10(self.hp_var_fgrad_range), np.log10(self.hp_var_fgrad_all[idx]))
+                mean_old_hp_fgrad = np.log10(np.median(self.hp_var_fgrad_all[idx_min:idx_max]))
+                hp_min, hp_max    = calc_hp_range(np.log10(self.hp_var_fgrad_range), mean_old_hp_fgrad)
             else:
                 hp_min = self.hp_var_fgrad_range[0]
                 hp_max = self.hp_var_fgrad_range[1]
@@ -225,7 +231,7 @@ class GpHparaCon:
         return cond, cond_grad
     
     def calc_cond_fronorm_w_grad(self, Kmat_w_eta, Kmat_chofac, Kmat_grad_hp = None):
-        # assert Kmat_w_eta[0,0] > 1, 'Kmat_w_eta should have diagonal entries greater than 1 since it contains the noise'
+        assert Kmat_w_eta[0,0] > 1, 'Kmat_w_eta should have diagonal entries greater than 1 since it contains the nugget and noise'
         
         n     = Kmat_w_eta.shape[0]
         K_inv = cho_solve(Kmat_chofac, np.eye(n))
