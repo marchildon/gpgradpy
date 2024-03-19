@@ -280,7 +280,7 @@ class GpHpara:
             rng     = np.random.default_rng(seed=42)
             th_all  = th_mean[:,None] + rng.normal(0, magn_rand, (n_x0, self.dim))
             
-            # Enfource bounds for th
+            # Enfource bounds for theta
             th_min = para_min[min_idx_th]
             th_max = para_max[min_idx_th]
             th_all[th_all < th_min] = th_min
