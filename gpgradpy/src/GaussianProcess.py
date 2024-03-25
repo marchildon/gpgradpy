@@ -61,7 +61,8 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     
     # Initial hyperparameters are used until the no. of eval is equal to this constant
     hp_const_n_eval      = 1   
-    hp_bound_factor      = 1e3 # Used to set lb and ub for hyperparameter at each iteration
+    hp_lhs_bound_factor  = 1e3 # Used to set lb and ub for LHS 
+    hp_box_bound_factor  = 1e5 # Used to set lb and ub for box constrains (>= hp_lhs_bound_factor)
     hp_median_n_idx      = 5 # No. of past iterations to consider to calculate the median of the hp
     
     # Initial hyperparamters values are used until n_eval > hp_const_n_eval
@@ -78,14 +79,6 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     hp_var_fgrad_range   = [1e-8, 1e8]
     
     ''' Options related to the ill-conditioning of the covariance matrix '''
-    
-    # # Ensures the gradient-enahnced correlation matrix is well-conditioned 
-    # wellcond_mtd_avail  = [None,            # no method is used
-    #                        'req_vmin',      # ensure min dist is sufficiently large
-    #                        'req_vmin_frac', # use a vreq * cond_vreq_frac
-    #                        'precon',        # modify how the corr matrix is constructed 
-    #                        'dflt_vmin',     # set min xdist to cond_dist_min_dflt
-    #                        'dflt_vmax']     # set max xdist to cond_dist_max_dflt
     
     # Ensures the gradient-enahnced correlation matrix is well-conditioned 
     wellcond_mtd_avail   = ['base',            # only use a positive nugget

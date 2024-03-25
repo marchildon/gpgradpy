@@ -8,7 +8,7 @@ Created on Thu Aug 26 08:35:53 2021
 
 from setuptools import setup, find_packages
 
-VERSION = '1.2.2'
+VERSION = '1.3.0'
 DESCRIPTION = 'Gradient-enhanced Gaussian process'
 LONG_DESCRIPTION = 'A python library that provides gradient-free and gradient-enhanced Gaussian processes.'
 

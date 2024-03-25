@@ -11,6 +11,7 @@ import numpy as np
 from dataclasses import dataclass
 
 from . import OptzLkd
+from . import GpHparaX0
 from . import GpHparaCon
 from . import GpHparaGrad
 
@@ -29,7 +30,7 @@ class HparaOptzInfo:
     idx_var_fgrad:  np.array = None
     bvec_log_optz:  np.array = None
 
-class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
+class GpHparaOptz(OptzLkd, GpHparaX0, GpHparaCon, GpHparaGrad):
     
     HparaOptzInfo = HparaOptzInfo
     
@@ -157,42 +158,25 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
         else:
             self._time_chofac = 0
             
+            ''' Select hp_x0 '''
+            
+            hp_x0, optz_bound, time_pick_hp0 = self.select_hp_optz_x0(i_optz, self.hp_info_optz_lkd)
+            
+            ''' Perform optimization starting at all rows in hp_x0 '''
+            
+            start_time = time.time() 
+            
             if ('rescale' in self.wellcond_mtd) and (self.cond_vreq_max_iter > 1):
-                time_pick_hp0 = 0 
-                
-                start_time = time.time() 
-                hp_optz, cond_val, surr_optz_info = self.optz_hp_max_lkd_mtd_rescale(i_optz)
-                time_hp_optz = time.time() - start_time
+                hp_optz, cond_val, surr_optz_info = self.optz_hp_max_lkd_mtd_rescale(i_optz, hp_x0, optz_bound)
             else:
-                if self.lkd_optz_start_mtd == 'lhs':
-                    # Select points from a lhs
-                    start_time = time.time() 
-                    hp_x0, optz_bound = self.get_hp_optz_x0(i_optz, self.hp_info_optz_lkd, self.optz_n_x0)
-                    time_pick_hp0 = time.time() - start_time
-                    
-                    # Perform optiization starting at all points in hp_x0
-                    start_time = time.time() 
-                    hp_optz, cond_val, surr_optz_info = self.optz_hp_max_lkd(hp_x0, optz_bound)
-                    time_hp_optz = time.time() - start_time
-                    
-                elif self.lkd_optz_start_mtd == 'hp_best':
-                    # Create several hp_val and select 1 to start the optz 
-                    start_time = time.time() 
-                    hp_x0, optz_bound = self.get_hp_best_init(i_optz)
-                    time_pick_hp0 = time.time() - start_time
-                    
-                    # Perform optimization starting at hp_x0
-                    start_time = time.time() 
-                    hp_optz, cond_val, surr_optz_info = self.optz_hp_max_lkd(hp_x0, optz_bound)
-                    time_hp_optz = time.time() - start_time
-                else:
-                    raise Exception(f'Unknown option lkd_optz_start_mtd = {self.lkd_optz_start_mtd}')
+                hp_optz, cond_val, surr_optz_info = self.optz_hp_max_lkd(hp_x0, optz_bound)
                     
                 if self._gp_optz_plt_lkd_bool:
                     self.plt_debug_lkd(i_optz, optz_bound, hp_x0, hp_optz)
-                        
-            time_chofac = self._time_chofac
-            hp_vals     = self.hp_vec2dataclass(self.hp_info_optz_lkd, hp_optz)
+                    
+            time_hp_optz = time.time() - start_time    
+            time_chofac  = self._time_chofac
+            hp_vals      = self.hp_vec2dataclass(self.hp_info_optz_lkd, hp_optz)
             
             # Optimize closed form hyperparameter and add them to hp_vals
             hp_vals = self.optz_closed_form_hp(hp_vals)
@@ -237,7 +221,7 @@ class GpHparaOptz(OptzLkd, GpHparaCon, GpHparaGrad):
         
         lkd_info, b_chofac_good = self.calc_lkd_all(hp_vals, calc_lkd = False, 
                                                     calc_cond = False, calc_grad = False)
-            
+        
         hp_vals.beta = lkd_info.hp_beta 
         
         if self.b_has_noisy_data is False:

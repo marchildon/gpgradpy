@@ -113,7 +113,7 @@ class OptzLkd(CalcLkd):
         cond_grad = self.calc_store_likelihood(hp_vec)[3]
         return cond_grad
 
-    def optz_hp_max_lkd_mtd_rescale(self, i_optz):
+    def optz_hp_max_lkd_mtd_rescale(self, i_optz, hp_x0, optz_bound):
         '''
         Parameters
         ----------
@@ -135,8 +135,6 @@ class OptzLkd(CalcLkd):
         assert 'rescale' in self.wellcond_mtd, f'Method should only be called for the rescale methods, but it is wellcond_mtd = {self.wellcond_mtd}'
         
         ''' Do optimization '''
-        
-        hp_x0, optz_bound = self.get_hp_optz_x0(self.hp_info_optz_lkd, self.optz_n_x0)
         
         best_hp, cond_val, surr_optz_info = self.optz_hp_max_lkd(hp_x0, optz_bound)
         
@@ -306,6 +304,18 @@ class OptzLkd(CalcLkd):
 
         idx_min = np.nanargmin(optz_obj_con_good)
         best_hp = optz_sol_con_good[idx_min, :]
+
+        # print(f'OptzLkd best_hp = {best_hp}')
+        # print(f'lb = {optz_bound.lb}')
+        # print(f'ub = {optz_bound.ub}')
+
+        # bvec_lb = best_hp < np.log10(self.hp_theta_range[0])
+        # bvec_ub = best_hp > np.log10(self.hp_theta_range[1])
+
+        # if np.any(bvec_lb) or np.any(bvec_ub):
+        #     print(f'best_hp = {best_hp}')
+        #     print(f'bvec_lb = {bvec_lb}')
+        #     print(f'bvec_ub = {bvec_ub}')
 
         ''' Set the new hyper parameters and store their values '''
 
