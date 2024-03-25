@@ -6,12 +6,8 @@ Created on Sat Mar 13 10:52:48 2021
 @author: andremarchildon
 """
 
-from dataclasses import dataclass
-
 import numpy as np
-from scipy.optimize import Bounds
-from smt.sampling_methods import LHS
-
+from dataclasses import dataclass
 
 @dataclass
 class HparaOptzVal:
