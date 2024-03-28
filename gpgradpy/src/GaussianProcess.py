@@ -170,6 +170,27 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         assert isinstance(use_grad, bool),   'use_grad must be of type bool'
         assert isinstance(kernel_type, str), 'kernel_type must be of type str'
         
+        self.dim      = dim
+        self.use_grad = use_grad
+        
+        self.set_wellcond_mtd(wellcond_mtd)
+        self.path_data_surr  = path_data_surr
+        self.surr_name       = surr_name
+        
+        Kernel.__init__(self, kernel_type)
+        
+        ''' Set other parameters '''
+        
+        self.set_mean_fun_op(mean_fun_type = mean_fun_type)
+        
+        # Setup for the path to the data
+        self.path_surr_txt      = path_data_surr + '.txt'
+        self.path_surr_old_txt  = path_data_surr + '_old.txt'
+        self.path_surr_npz      = path_data_surr + '.npz'
+        self.path_surr_old_npz  = path_data_surr + '_old.npz'
+        
+    def set_wellcond_mtd(self, wellcond_mtd):
+        
         assert wellcond_mtd in self.wellcond_mtd_avail, \
             f'Requested method not available, wellcond_mtd : {wellcond_mtd}'
             
@@ -177,30 +198,12 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             wellcond_mtd = 'base'
         elif wellcond_mtd == 'rescale_eta_vary':
             self.cond_eta_is_const = False
-        
-        self.dim      = dim
-        self.use_grad = use_grad
-        
-        if use_grad is False:
+            
+        if not self.use_grad:
             wellcond_mtd = 'base'
         
         self.wellcond_mtd    = wellcond_mtd
-        self.path_data_surr  = path_data_surr
-        self.surr_name       = surr_name
         
-        Kernel.__init__(self, kernel_type)
-        
-        ''' Setup for the path to the data '''
-        
-        self.path_surr_txt      = path_data_surr + '.txt'
-        self.path_surr_old_txt  = path_data_surr + '_old.txt'
-        self.path_surr_npz      = path_data_surr + '.npz'
-        self.path_surr_old_npz  = path_data_surr + '_old.npz'
-
-        ''' Set other parameters '''
-        
-        self.set_mean_fun_op(mean_fun_type = mean_fun_type)
-
         if self.wellcond_mtd == 'precon':
             self.b_use_cond_cstr = False
         else:
