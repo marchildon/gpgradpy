@@ -162,71 +162,75 @@ class GpHparaCon:
         # assert Kmat_w_eta[0,0] > 1, 'Kmat_w_eta should have diagonal entries greater than 1 since it contains the noise'
 
         n_data = Kmat_w_eta.shape[0]
-        cond = np.linalg.cond(Kmat_w_eta, p=2)
+        cond   = np.linalg.cond(Kmat_w_eta, p=2)
         
         if Kmat_grad_hp is None:
             cond_grad = None
         else:
-            assert self.wellcond_mtd != 'precon', 'Not setup to calculate the gradient of the condition number if wellcond_mtd = "precon" '
-            
-            nder = Kmat_grad_hp.shape[0]
-            assert n_data == Kmat_grad_hp.shape[1] == Kmat_grad_hp.shape[2], 'Shape of Kmat_grad_hp is incompatible'
-    
-            eigval_all, eigvec_all = np.linalg.eig(Kmat_w_eta)
-            
-            idx_max  = np.argmax(eigval_all)
-            v_max    = eigvec_all[:,idx_max]
-            
-            idx_mmin = np.argmin(eigval_all)
-            eig_min  = eigval_all[idx_mmin]
-            v_min    = eigvec_all[:,idx_mmin]
-            
-            eig_min_mod  = np.max((eig_min, 1e-16))
-            
-            v_outer_diff = np.outer(v_max, v_max) - cond * np.outer(v_min, v_min)
-            cond_grad    = np.zeros(nder)
-    
-            for i in range(nder):
-                cond_grad[i] = np.sum(v_outer_diff * Kmat_grad_hp[i,:,:]) / eig_min_mod
-    
-            # Code below is not used since scipy.linalg.eigh has a bug and occationally fails
-    
-            # try:
-            #     eig_min, v_min = linalg.eigh(Kmat_w_eta, eigvals=[0,0])
-            # except:
-            #     print('** Error with linalg.eigh for eig min **')
-            #     cond_grad = np.zeros(nder)
-            #     return cond, cond_grad
-    
-            # try:
-            #     eig_max, v_max = linalg.eigh(Kmat_w_eta, eigvals=[n_data-1,n_data-1])
-            # except:
-            #     if eig_max.size == 0:
-            #         try:
-            #             print('** Error with scipy linalg.eigh **')
-            #             eigval_all, eigvec_all = np.linalg.eig(Kmat_w_eta)
-            #             idx_max = np.argmax(eigval_all)
-            #             eig_max = eigval_all[idx_max]
-            #             v_max   = eigvec_all[:,idx_max]
-            #         except:
-            #             print('** Error with scipy linalg.eigh and np.linalg.eig **')
-            #             cond_grad = np.zeros(nder)
-            #             return cond, cond_grad
-            #     else:
-            #         print('** Error with linalg.eigh for eig max **')
-            #         cond_grad = np.full(nder, np.nan)
-            #         return cond, cond_grad
-    
-            # eig_min_mod  = np.max((eig_min[0], 1e-16))
-            
-            # try:
-            #     v_outer_diff = np.outer(v_max, v_max) - cond * np.outer(v_min, v_min)
-            #     cond_grad    = np.zeros(nder)
+            if self.wellcond_mtd == 'precon':
+                print('Not setup to calculate the gradient of the condition number if wellcond_mtd = "precon" ')
+                cond_grad = None
+            else:
+                # assert self.wellcond_mtd != 'precon', 'Not setup to calculate the gradient of the condition number if wellcond_mtd = "precon" '
+                
+                nder = Kmat_grad_hp.shape[0]
+                assert n_data == Kmat_grad_hp.shape[1] == Kmat_grad_hp.shape[2], 'Shape of Kmat_grad_hp is incompatible'
         
-            #     for i in range(nder):
-            #         cond_grad[i] = np.sum(v_outer_diff * Kmat_grad_hp[i,:,:]) / eig_min_mod
-            # except:
-            #     print('Error calculating cond_grad')
+                eigval_all, eigvec_all = np.linalg.eig(Kmat_w_eta)
+                
+                idx_max  = np.argmax(eigval_all)
+                v_max    = eigvec_all[:,idx_max]
+                
+                idx_mmin = np.argmin(eigval_all)
+                eig_min  = eigval_all[idx_mmin]
+                v_min    = eigvec_all[:,idx_mmin]
+                
+                eig_min_mod  = np.max((eig_min, 1e-16))
+                
+                v_outer_diff = np.outer(v_max, v_max) - cond * np.outer(v_min, v_min)
+                cond_grad    = np.zeros(nder)
+        
+                for i in range(nder):
+                    cond_grad[i] = np.sum(v_outer_diff * Kmat_grad_hp[i,:,:]) / eig_min_mod
+        
+                # Code below is not used since scipy.linalg.eigh has a bug and occationally fails
+        
+                # try:
+                #     eig_min, v_min = linalg.eigh(Kmat_w_eta, eigvals=[0,0])
+                # except:
+                #     print('** Error with linalg.eigh for eig min **')
+                #     cond_grad = np.zeros(nder)
+                #     return cond, cond_grad
+        
+                # try:
+                #     eig_max, v_max = linalg.eigh(Kmat_w_eta, eigvals=[n_data-1,n_data-1])
+                # except:
+                #     if eig_max.size == 0:
+                #         try:
+                #             print('** Error with scipy linalg.eigh **')
+                #             eigval_all, eigvec_all = np.linalg.eig(Kmat_w_eta)
+                #             idx_max = np.argmax(eigval_all)
+                #             eig_max = eigval_all[idx_max]
+                #             v_max   = eigvec_all[:,idx_max]
+                #         except:
+                #             print('** Error with scipy linalg.eigh and np.linalg.eig **')
+                #             cond_grad = np.zeros(nder)
+                #             return cond, cond_grad
+                #     else:
+                #         print('** Error with linalg.eigh for eig max **')
+                #         cond_grad = np.full(nder, np.nan)
+                #         return cond, cond_grad
+        
+                # eig_min_mod  = np.max((eig_min[0], 1e-16))
+                
+                # try:
+                #     v_outer_diff = np.outer(v_max, v_max) - cond * np.outer(v_min, v_min)
+                #     cond_grad    = np.zeros(nder)
+            
+                #     for i in range(nder):
+                #         cond_grad[i] = np.sum(v_outer_diff * Kmat_grad_hp[i,:,:]) / eig_min_mod
+                # except:
+                #     print('Error calculating cond_grad')
 
         return cond, cond_grad
     
