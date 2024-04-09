@@ -106,16 +106,16 @@ class GpHparaX0:
         
         if hp_optz_info.has_varK:
             para_med = np.median(self.hp_varK_all[idx_min:idx_max])
-            para_med_all[hp_optz_info.hp_varK_range] = para_med
+            para_med_all[hp_optz_info.idx_varK] = para_med
             
-            lhs_lb[hp_optz_info.hp_varK_range] = np.max((para_med / lhs_factor, self.hp_varK_range[0]))
-            lhs_ub[hp_optz_info.hp_varK_range] = np.min((para_med * lhs_factor, self.hp_varK_range[1]))
+            lhs_lb[hp_optz_info.idx_varK] = np.max((para_med / lhs_factor, self.hp_varK_range[0]))
+            lhs_ub[hp_optz_info.idx_varK] = np.min((para_med * lhs_factor, self.hp_varK_range[1]))
             
-            box_lb[hp_optz_info.hp_varK_range] = np.max((para_med / box_factor, self.hp_varK_range[0]))
-            box_ub[hp_optz_info.hp_varK_range] = np.min((para_med * box_factor, self.hp_varK_range[1]))
+            box_lb[hp_optz_info.idx_varK] = np.max((para_med / box_factor, self.hp_varK_range[0]))
+            box_ub[hp_optz_info.idx_varK] = np.min((para_med * box_factor, self.hp_varK_range[1]))
             
         if hp_optz_info.has_var_fval:
-            para_med = np.median(self.hp_var_fval_all[idx_min:idx_max])
+            para_med = np.max((self.hp_var_fval_range[0], np.median(self.hp_var_fval_all[idx_min:idx_max])))
             para_med_all[hp_optz_info.idx_var_fval] = para_med
             
             lhs_lb[hp_optz_info.idx_var_fval] = np.max((para_med / lhs_factor, self.hp_var_fval_range[0]))
@@ -125,7 +125,7 @@ class GpHparaX0:
             box_ub[hp_optz_info.idx_var_fval] = np.min((para_med * box_factor, self.hp_var_fval_range[1]))
             
         if hp_optz_info.has_var_fgrad:
-            para_med = np.median(self.hp_var_fgrad_all[idx_min:idx_max])
+            para_med = np.max((self.hp_var_fgrad_range[0], np.median(self.hp_var_fgrad_all[idx_min:idx_max])))
             para_med_all[hp_optz_info.idx_var_fgrad] = para_med
             
             lhs_lb[hp_optz_info.idx_var_fgrad] = np.max((para_med / lhs_factor, self.hp_var_fgrad_range[0]))
