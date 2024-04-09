@@ -321,7 +321,11 @@ class Kernel(KernelSqExp, KernelRatQuad, KernelMatern5f2):
         
         ''' Preliminary '''
         
-        std_fval, _, std_fgrad = self.get_scl_eval_data()[1:]
+        if self.b_fval_zero and self.b_fgrad_zero:
+            std_fval  = np.zeros(self.n_eval)
+            std_fgrad = np.zeros((self.n_grad, self.dim))
+        else:
+            std_fval, _, std_fgrad = self.get_scl_eval_data()[1:]
         
         if self.use_grad == False:
             if self.known_eps_fval:
