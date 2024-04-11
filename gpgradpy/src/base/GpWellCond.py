@@ -39,7 +39,8 @@ class GpWellCondVreq:
             
         return vmin_req_grad
 
-    def rescaling_data_w_theta_sol(self, X_scl_v1, xvec_scale_v1, hp_theta):
+    def rescaling_data_w_theta_sol(self, X_scl_v1, xvec_scale_v1, hp_theta, 
+                                   tol_min_dist_x = 1e-15):
         
         ''' Calculate new scaling '''
         
@@ -61,7 +62,7 @@ class GpWellCondVreq:
         X_scl_v2        = X_scl_v1 * xvec_scale_v2[None,:]
         
         # Calculate and apply correction to have vmin(X) == vreq
-        min_dist_v2     = CommonFun.calc_dist_min(X_scl_v2)
+        min_dist_v2     = np.max((CommonFun.calc_dist_min(X_scl_v2), tol_min_dist_x))
         correction      = vreq / min_dist_v2
         xvec_scale_new  = xvec_scale_v1 * xvec_scale_v2 * correction
         
