@@ -75,8 +75,8 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     hp_theta_range       = [1e-18 , 1e24] 
     hp_varK_range        = [1e-24, 1e14] # Used if varK is optimized numerically (when there is noisy data)
     hp_kernel_range      = [np.nan, np.nan]
-    hp_var_fval_range    = [1e-8, 1e8]
-    hp_var_fgrad_range   = [1e-8, 1e8]
+    hp_var_fval_range    = [1e-20, 1e2]
+    hp_var_fgrad_range   = [1e-20, 1e2]
     
     ''' Options related to the ill-conditioning of the covariance matrix '''
     
