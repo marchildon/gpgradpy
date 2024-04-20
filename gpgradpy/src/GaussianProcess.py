@@ -69,8 +69,8 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
     hp_theta_init        = 1e-2
     hp_varK_init         = 1.0 # Used if varK is optimized numerically, ie not in closed form solution
     hp_kernel_init       = np.nan
-    hp_var_fval_init     = 0.0 
-    hp_var_fgrad_init    = 0.0
+    hp_var_fval_init     = 1e-6
+    hp_var_fgrad_init    = 1e-6
 
     hp_theta_range       = [1e-18 , 1e24] 
     hp_varK_range        = [1e-24, 1e14] # Used if varK is optimized numerically (when there is noisy data)
