@@ -128,8 +128,8 @@ class GpInfo:
         ''' Get the required data '''
 
         n_iter  = self.hp_varK_all.size
-        n_data  = 5 + self.b_optz_var_fval + self.b_optz_var_fgrad \
-            + np.min((max_n_theta_print, self.dim)) \
+        n_data  = (5 + self.b_optz_var_fval + self.b_optz_var_fgrad 
+                   + np.min((max_n_theta_print, self.dim)))
             
         idx_vec = np.arange(n_iter)
         
