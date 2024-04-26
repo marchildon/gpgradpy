@@ -84,70 +84,94 @@ class GpHparaX0:
         box_lb       = np.full(n_hp, np.nan)
         box_ub       = np.full(n_hp, np.nan)
         
-        if hp_optz_info.has_theta:
-            para_med = np.median(self.hp_theta_all[idx_min:idx_max, :], axis=0)
-            para_med = np.maximum(para_med, self.hp_theta_range[0])
-            para_med = np.minimum(para_med, self.hp_theta_range[1])
+        if i_optz == 0:
+            hp_vals = self.get_init_hp_vals()
             
-            para_med_all[hp_optz_info.idx_theta] = para_med
+            if hp_optz_info.has_theta:
+                para_med_all[hp_optz_info.idx_theta] = hp_vals.theta
             
-            lhs_lb[hp_optz_info.idx_theta] = np.maximum(para_med / lhs_factor, self.hp_theta_range[0])
-            lhs_ub[hp_optz_info.idx_theta] = np.minimum(para_med * lhs_factor, self.hp_theta_range[1])
+            if hp_optz_info.has_kernel:
+                para_med_all[hp_optz_info.idx_kernel] = hp_vals.kernel
             
-            box_lb[hp_optz_info.idx_theta] = np.maximum(para_med / box_factor, self.hp_theta_range[0])
-            box_ub[hp_optz_info.idx_theta] = np.minimum(para_med * box_factor, self.hp_theta_range[1])
-        
-        if hp_optz_info.has_kernel:
-            para_med = np.median(self.hp_kernel_all[idx_min:idx_max])
-            para_med = np.max((para_med, self.hp_kernel_range[0]))
-            para_med = np.min((para_med, self.hp_kernel_range[1]))
+            if hp_optz_info.has_varK:
+                para_med_all[hp_optz_info.idx_varK] = hp_vals.varK 
+                
+            if hp_optz_info.has_var_fval:
+                para_med_all[hp_optz_info.idx_var_fval] = hp_vals.var_fval 
+                
+            if hp_optz_info.has_var_fgrad:
+                para_med_all[hp_optz_info.idx_var_fgrad] = hp_vals.var_fgrad 
+                
+            lhs_lb = para_med_all / lhs_factor
+            box_lb = np.copy(lhs_lb)
             
-            para_med_all[hp_optz_info.idx_kernel] = para_med
+            lhs_ub = para_med_all * lhs_factor
+            box_ub = np.copy(lhs_ub)
+        else:
+            if hp_optz_info.has_theta:
+                para_med = np.median(self.hp_theta_all[idx_min:idx_max, :], axis=0)
+                para_med = np.maximum(para_med, self.hp_theta_range[0])
+                para_med = np.minimum(para_med, self.hp_theta_range[1])
+                
+                para_med_all[hp_optz_info.idx_theta] = para_med
+                
+                lhs_lb[hp_optz_info.idx_theta] = np.maximum(para_med / lhs_factor, self.hp_theta_range[0])
+                lhs_ub[hp_optz_info.idx_theta] = np.minimum(para_med * lhs_factor, self.hp_theta_range[1])
+                
+                box_lb[hp_optz_info.idx_theta] = np.maximum(para_med / box_factor, self.hp_theta_range[0])
+                box_ub[hp_optz_info.idx_theta] = np.minimum(para_med * box_factor, self.hp_theta_range[1])
             
-            lhs_lb[hp_optz_info.idx_kernel] = np.max((para_med / lhs_factor, self.hp_kernel_range[0]))
-            lhs_ub[hp_optz_info.idx_kernel] = np.min((para_med * lhs_factor, self.hp_kernel_range[1]))
+            if hp_optz_info.has_kernel:
+                para_med = np.median(self.hp_kernel_all[idx_min:idx_max])
+                para_med = np.max((para_med, self.hp_kernel_range[0]))
+                para_med = np.min((para_med, self.hp_kernel_range[1]))
+                
+                para_med_all[hp_optz_info.idx_kernel] = para_med
+                
+                lhs_lb[hp_optz_info.idx_kernel] = np.max((para_med / lhs_factor, self.hp_kernel_range[0]))
+                lhs_ub[hp_optz_info.idx_kernel] = np.min((para_med * lhs_factor, self.hp_kernel_range[1]))
+                
+                box_lb[hp_optz_info.idx_kernel] = np.max((para_med / box_factor, self.hp_kernel_range[0]))
+                box_ub[hp_optz_info.idx_kernel] = np.min((para_med * box_factor, self.hp_kernel_range[1]))
             
-            box_lb[hp_optz_info.idx_kernel] = np.max((para_med / box_factor, self.hp_kernel_range[0]))
-            box_ub[hp_optz_info.idx_kernel] = np.min((para_med * box_factor, self.hp_kernel_range[1]))
-        
-        if hp_optz_info.has_varK:
-            para_med = np.median(self.hp_varK_all[idx_min:idx_max])
-            para_med = np.max((para_med, self.hp_varK_range[0]))
-            para_med = np.min((para_med, self.hp_varK_range[1]))
-            
-            para_med_all[hp_optz_info.idx_varK] = para_med
-            
-            lhs_lb[hp_optz_info.idx_varK] = np.max((para_med / lhs_factor, self.hp_varK_range[0]))
-            lhs_ub[hp_optz_info.idx_varK] = np.min((para_med * lhs_factor, self.hp_varK_range[1]))
-            
-            box_lb[hp_optz_info.idx_varK] = np.max((para_med / box_factor, self.hp_varK_range[0]))
-            box_ub[hp_optz_info.idx_varK] = np.min((para_med * box_factor, self.hp_varK_range[1]))
-            
-        if hp_optz_info.has_var_fval:
-            para_med = np.max((self.hp_var_fval_range[0], np.median(self.hp_var_fval_all[idx_min:idx_max])))
-            para_med = np.max((para_med, self.hp_var_fval_range[0]))
-            para_med = np.min((para_med, self.hp_var_fval_range[1]))
-            
-            para_med_all[hp_optz_info.idx_var_fval] = para_med
-            
-            lhs_lb[hp_optz_info.idx_var_fval] = np.max((para_med / lhs_factor, self.hp_var_fval_range[0]))
-            lhs_ub[hp_optz_info.idx_var_fval] = np.min((para_med * lhs_factor, self.hp_var_fval_range[1]))
-            
-            box_lb[hp_optz_info.idx_var_fval] = np.max((para_med / box_factor, self.hp_var_fval_range[0]))
-            box_ub[hp_optz_info.idx_var_fval] = np.min((para_med * box_factor, self.hp_var_fval_range[1]))
-            
-        if hp_optz_info.has_var_fgrad:
-            para_med = np.max((self.hp_var_fgrad_range[0], np.median(self.hp_var_fgrad_all[idx_min:idx_max])))
-            para_med = np.max((para_med, self.hp_var_fgrad_range[0]))
-            para_med = np.min((para_med, self.hp_var_fgrad_range[1]))
-            
-            para_med_all[hp_optz_info.idx_var_fgrad] = para_med
-            
-            lhs_lb[hp_optz_info.idx_var_fgrad] = np.max((para_med / lhs_factor, self.hp_var_fgrad_range[0]))
-            lhs_ub[hp_optz_info.idx_var_fgrad] = np.min((para_med * lhs_factor, self.hp_var_fgrad_range[1]))
-            
-            box_lb[hp_optz_info.idx_var_fgrad] = np.max((para_med / box_factor, self.hp_var_fgrad_range[0]))
-            box_ub[hp_optz_info.idx_var_fgrad] = np.min((para_med * box_factor, self.hp_var_fgrad_range[1]))
+            if hp_optz_info.has_varK:
+                para_med = np.median(self.hp_varK_all[idx_min:idx_max])
+                para_med = np.max((para_med, self.hp_varK_range[0]))
+                para_med = np.min((para_med, self.hp_varK_range[1]))
+                
+                para_med_all[hp_optz_info.idx_varK] = para_med
+                
+                lhs_lb[hp_optz_info.idx_varK] = np.max((para_med / lhs_factor, self.hp_varK_range[0]))
+                lhs_ub[hp_optz_info.idx_varK] = np.min((para_med * lhs_factor, self.hp_varK_range[1]))
+                
+                box_lb[hp_optz_info.idx_varK] = np.max((para_med / box_factor, self.hp_varK_range[0]))
+                box_ub[hp_optz_info.idx_varK] = np.min((para_med * box_factor, self.hp_varK_range[1]))
+                
+            if hp_optz_info.has_var_fval:
+                para_med = np.max((self.hp_var_fval_range[0], np.median(self.hp_var_fval_all[idx_min:idx_max])))
+                para_med = np.max((para_med, self.hp_var_fval_range[0]))
+                para_med = np.min((para_med, self.hp_var_fval_range[1]))
+                
+                para_med_all[hp_optz_info.idx_var_fval] = para_med
+                
+                lhs_lb[hp_optz_info.idx_var_fval] = np.max((para_med / lhs_factor, self.hp_var_fval_range[0]))
+                lhs_ub[hp_optz_info.idx_var_fval] = np.min((para_med * lhs_factor, self.hp_var_fval_range[1]))
+                
+                box_lb[hp_optz_info.idx_var_fval] = np.max((para_med / box_factor, self.hp_var_fval_range[0]))
+                box_ub[hp_optz_info.idx_var_fval] = np.min((para_med * box_factor, self.hp_var_fval_range[1]))
+                
+            if hp_optz_info.has_var_fgrad:
+                para_med = np.max((self.hp_var_fgrad_range[0], np.median(self.hp_var_fgrad_all[idx_min:idx_max])))
+                para_med = np.max((para_med, self.hp_var_fgrad_range[0]))
+                para_med = np.min((para_med, self.hp_var_fgrad_range[1]))
+                
+                para_med_all[hp_optz_info.idx_var_fgrad] = para_med
+                
+                lhs_lb[hp_optz_info.idx_var_fgrad] = np.max((para_med / lhs_factor, self.hp_var_fgrad_range[0]))
+                lhs_ub[hp_optz_info.idx_var_fgrad] = np.min((para_med * lhs_factor, self.hp_var_fgrad_range[1]))
+                
+                box_lb[hp_optz_info.idx_var_fgrad] = np.max((para_med / box_factor, self.hp_var_fgrad_range[0]))
+                box_ub[hp_optz_info.idx_var_fgrad] = np.min((para_med * box_factor, self.hp_var_fgrad_range[1]))
         
         ''' Create LHS and box constraints '''
         
