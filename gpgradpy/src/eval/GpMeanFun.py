@@ -66,7 +66,18 @@ class GpMeanFunPoly:
             
         return mean_fval, mean_fgrad, mean_fhess
         
-    def calc_model_max_lkd_poly(self, K_chofac, data_vec, K_grad_hp):
+    def eval_mean_fun_qN(self, x2model):
+        
+        vec        = x2model - self._qN_xvec
+        hess_vec   = np.dot(self._qN_fhess, vec)
+        
+        mean_fval  = self._qN_fval + np.dot(self._qN_fgrad, vec) + 0.5* np.dot(vec, hess_vec)
+        mean_fgrad = self._qN_fgrad + hess_vec
+        mean_fhess = self._qN_fhess
+        
+        return mean_fval, mean_fgrad, mean_fhess
+    
+    def calc_mean_fun_wrt_hpara_poly(self, K_chofac, data_vec, K_grad_hp):
         '''
         Parameters
         ----------
@@ -120,6 +131,23 @@ class GpMeanFunPoly:
             model_grad_hp = vand_aug @ beta_grad 
         
         return model_val, model_grad_hp, beta, beta_grad
+    
+    # def calc_mean_fun_wrt_hpara_qN(self, K_chofac, data_vec, K_grad_hp, x2model):
+        
+    #     model_val = self.eval_mean_fun_qN(x2model)[0]
+        
+    #     beta      = None
+    #     beta_grad = None
+        
+    #     if K_grad_hp is None:
+    #         model_grad_hp = None
+    #         # beta_grad     = None
+    #     else:
+    #         n_hp          = K_grad_hp.shape[0]
+    #         model_grad_hp = np.zeros((0,n_hp))
+        
+    #     return model_val, model_grad_hp, beta, beta_grad
+        
     
     def calc_vand(self, x2model, calc_grad = False, calc_hess = False):
         '''
@@ -200,10 +228,14 @@ class GpMeanFun(GpMeanFunPoly):
             self.n_beta_coeff    = 1 
             self.beta_var_npara  = self.n_beta_coeff
             self.optz_beta_w_lkd = True
+        elif mean_fun_type == 'qN_SR1':
+            self.n_beta_coeff    = 0 
+            self.beta_var_npara  = self.n_beta_coeff
+            self.optz_beta_w_lkd = False
         else:
             raise Exception(f'mean_fun_type = {mean_fun_type} not available')
             
-    def eval_mean_fun(self, x2model, beta_vec, 
+    def eval_mean_fun(self, x2model, beta_vec = None, 
                       bvec_use_grad = None,  bvec_use_hess = None, 
                       calc_grad     = False, calc_hess     = False):
         
@@ -211,12 +243,16 @@ class GpMeanFun(GpMeanFunPoly):
             return self.eval_mean_fun_poly(x2model,       beta_vec, 
                                            bvec_use_grad, bvec_use_hess, 
                                            calc_grad,     calc_hess)
+        elif self.mean_fun_type == 'qN_SR1':
+            return self.eval_mean_fun_poly(x2model)
         else:
             raise Exception('Unknown method')
             
-    def calc_model_max_lkd(self, K_chofac, data_vec, K_grad_hp = None):
+    def calc_mean_fun_wrt_hpara(self, K_chofac, data_vec, K_grad_hp = None):
         
         if 'poly' in self.mean_fun_type:
-            return self.calc_model_max_lkd_poly(K_chofac, data_vec, K_grad_hp)
+            return self.calc_mean_fun_wrt_hpara_poly(K_chofac, data_vec, K_grad_hp)
+        
+        
         else:
             raise Exception('Unknown method')

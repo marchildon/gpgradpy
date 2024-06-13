@@ -57,7 +57,7 @@ class calcLkdWoNoise:
         
         if lkd_use_adj_mtd:
             mean_model_val, mean_model_hp_grad, hp_beta, hp_beta_grad \
-                = self.calc_model_max_lkd(Kern_chofac, data_vec)
+                = self.calc_mean_fun_wrt_hpara(Kern_chofac, data_vec)
                 
             hp_varK_grad    = None
             ln_det_KernGrad = None
@@ -67,7 +67,7 @@ class calcLkdWoNoise:
                                                    calc_lkd = calc_lkd)
         else:
             mean_model_val, mean_model_hp_grad, hp_beta, hp_beta_grad \
-                = self.calc_model_max_lkd(Kern_chofac, data_vec, KernGrad_hp)
+                = self.calc_mean_fun_wrt_hpara(Kern_chofac, data_vec, KernGrad_hp)
                 
             hp_varK, hp_varK_grad \
                 = self.calc_lkd_opt_varK(data_vec,     mean_model_val,
@@ -213,8 +213,12 @@ class calcLkdWNoise:
         data_vec = self.make_data_vec(fval_scl, grad_scl)
         n_data   = data_vec.size
         
-        mean_model_val, mean_model_hp_grad, hp_beta, hp_beta_grad \
-            = self.calc_model_max_lkd(Kcov_chofac, data_vec, Kcov_grad_hp)
+        if self.n_beta_coeff > 0:
+            mean_model_val, mean_model_hp_grad, hp_beta, hp_beta_grad \
+                = self.calc_mean_fun_wrt_hpara(Kcov_chofac, data_vec, Kcov_grad_hp)
+        else:
+            mean_model_val = self.eval_mean_fun(x2model)
+            
         
         # Calculate data_diff, ie the diff between the mean function and the data
         data_diff          = data_vec - mean_model_val

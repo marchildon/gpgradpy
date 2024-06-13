@@ -63,6 +63,10 @@ class GpParaDef:
         # Misc
         self.var_fval               = np.full(n_optz_max, np.nan)
         self.varK_var_fval          = np.full(n_optz_max, np.nan)
+        
+        # # Quasi-Newton data
+        # if mean_fun_type == 'qN_SR1':
+        #     self.
 
     def finish_optz_surr(self, n_optz_final):
         

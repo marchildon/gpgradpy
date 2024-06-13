@@ -217,7 +217,8 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             self.b_use_data_scl = False
         
     def set_data(self, x_eval, fval, std_fval, 
-                 grad = None, std_grad = None, bvec_use_grad = None):
+                 grad          = None, std_grad  = None, 
+                 bvec_use_grad = None, idx_xbest = None):
         '''
         Parameters
         ----------
@@ -236,6 +237,8 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             Indicates which gradients in grad are used to construct the 
             surrogate. The default is None, in which case all gradients are used.
             The default is None.
+        idx_xbest : int.
+            Index of x_eval with the lowest merit function
         '''
         
         ''' Check inputs '''
@@ -300,6 +303,7 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         self._std_grad_in  = std_grad if self.known_eps_fgrad else None
         
         self.bvec_use_grad = bvec_use_grad
+        self.idx_xbest     = idx_xbest
         
         ''' Check if the data is noisy and if its variance is known '''
         
