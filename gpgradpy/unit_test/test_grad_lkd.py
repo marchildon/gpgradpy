@@ -28,10 +28,10 @@ use_grad = True
 cond_eta_is_const = True
 
 # x_eval   = np.random.rand(10,1)
-# x_eval = 3*np.array([[0., 0.], [1., 0.], [0., 1.], [1., 1.]])
+x_eval = 3*np.array([[0., 0.], [1., 0.], [0., 1.], [1., 1.]])
 # x_eval = 3*np.array([[0., 0.], [1., 1.]])
 
-x_eval = 3*np.array([[0.], [1.]])
+# x_eval = 3*np.array([[0.], [1.]])
 
 
 n_eval, dim  = x_eval.shape
@@ -75,7 +75,11 @@ def call_fun(x_in, calc_grad):
 
     return fun_out, grad_out
 
-theta_vec       = 0.001*np.linspace(1.5, 3, dim) 
+if dim == 1:
+    theta_vec = np.array([0.1])
+else:
+    theta_vec = 0.1*np.linspace(1.5, 3, dim) 
+    
 varK_init       = 4
 var_fval_init   = 3
 var_fgrad_init  = 4
@@ -329,8 +333,8 @@ class TestGrad(unittest.TestCase):
                 
                 calc_fd_lkd(GP_w_noise, wellcond_mtd, kernel_type, hp_vals_mod, idx, 'Hpara: var_fgrad w noise', b_noise_free)   
 
-# if __name__ == '__main__':
-#     unittest.main()
+if __name__ == '__main__':
+    unittest.main()
 
 # wellcond_mtd = 'rescale_eta_vary'
 # kernel_type  = 'SqExp'
@@ -345,35 +349,35 @@ class TestGrad(unittest.TestCase):
 # idx = np.min(GP_wo_noise.hp_info_optz_lkd.idx_theta)
 # calc_fd_lkd(GP_wo_noise, wellcond_mtd, kernel_type, hp_vals_mod, idx, 'Hpara: theta wo noise', b_noise_free)   
 
-wellcond_mtd = 'precon'
-kernel_type  = 'SqExp'
-cond_eta_is_const = True
+# wellcond_mtd = 'precon'
+# kernel_type  = 'SqExp'
+# cond_eta_is_const = True
 
-print(f'cond_eta_is_const = {cond_eta_is_const}')
+# print(f'cond_eta_is_const = {cond_eta_is_const}')
     
-b_noise_free = True
-GP_wo_noise  = setup_GP_wo_noise(wellcond_mtd, kernel_type)
-hp_kernel    = get_hp_kernel(kernel_type)
+# b_noise_free = True
+# GP_wo_noise  = setup_GP_wo_noise(wellcond_mtd, kernel_type)
+# hp_kernel    = get_hp_kernel(kernel_type)
 
-hp_vals_mod           = make_hp_vals_wo_noise(GP_wo_noise, hp_kernel)
-hp_vals_mod.theta[0] += eps
+# hp_vals_mod           = make_hp_vals_wo_noise(GP_wo_noise, hp_kernel)
+# hp_vals_mod.theta[0] += eps
 
-idx = np.min(GP_wo_noise.hp_info_optz_lkd.idx_theta)
-calc_fd_lkd(GP_wo_noise, wellcond_mtd, kernel_type, hp_vals_mod, idx, 'Hpara: theta wo noise', b_noise_free)   
+# idx = np.min(GP_wo_noise.hp_info_optz_lkd.idx_theta)
+# calc_fd_lkd(GP_wo_noise, wellcond_mtd, kernel_type, hp_vals_mod, idx, 'Hpara: theta wo noise', b_noise_free)   
 
 
-wellcond_mtd = 'precon'
-kernel_type  = 'SqExp'
-cond_eta_is_const = False
+# wellcond_mtd = 'precon'
+# kernel_type  = 'SqExp'
+# cond_eta_is_const = False
 
-print(f'cond_eta_is_const = {cond_eta_is_const}')
+# print(f'cond_eta_is_const = {cond_eta_is_const}')
     
-b_noise_free = True
-GP_wo_noise  = setup_GP_wo_noise(wellcond_mtd, kernel_type)
-hp_kernel    = get_hp_kernel(kernel_type)
+# b_noise_free = True
+# GP_wo_noise  = setup_GP_wo_noise(wellcond_mtd, kernel_type)
+# hp_kernel    = get_hp_kernel(kernel_type)
 
-hp_vals_mod           = make_hp_vals_wo_noise(GP_wo_noise, hp_kernel)
-hp_vals_mod.theta[0] += eps
+# hp_vals_mod           = make_hp_vals_wo_noise(GP_wo_noise, hp_kernel)
+# hp_vals_mod.theta[0] += eps
 
-idx = np.min(GP_wo_noise.hp_info_optz_lkd.idx_theta)
-calc_fd_lkd(GP_wo_noise, wellcond_mtd, kernel_type, hp_vals_mod, idx, 'Hpara: theta wo noise', b_noise_free)   
+# idx = np.min(GP_wo_noise.hp_info_optz_lkd.idx_theta)
+# calc_fd_lkd(GP_wo_noise, wellcond_mtd, kernel_type, hp_vals_mod, idx, 'Hpara: theta wo noise', b_noise_free)   

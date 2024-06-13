@@ -18,8 +18,8 @@ from gpgradpy.src import GaussianProcess
 
 kernel_type_vec = ['SqExp', 'Ma5f2', 'RatQu']
 
-list_wellcond_mtd_wo_noise = [None, 'precon'] # [None, 'precon', 'req_vmin',]
-list_wellcond_mtd_w_noise  = [None, 'precon'] # req_vmin is not setup for noisy problems
+list_wellcond_mtd_wo_noise = ['base', 'precon'] # ['base', 'precon', 'req_vmin',]
+list_wellcond_mtd_w_noise  = ['base', 'precon'] # req_vmin is not setup for noisy problems
 
 ''' Set parameters '''
 

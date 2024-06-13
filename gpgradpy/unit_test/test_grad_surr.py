@@ -20,7 +20,7 @@ xmin = 0
 xmax = 2
 
 kernel_type_vec  = ['SqExp', 'RatQu', 'Ma5f2']
-wellcond_mtd_vec = [None, 'req_vmin', 'precon']
+wellcond_mtd_vec = ['base', 'rescale_origin', 'precon']
 
 method2set_hp = 'set'
 

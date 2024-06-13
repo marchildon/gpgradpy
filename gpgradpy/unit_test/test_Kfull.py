@@ -17,7 +17,7 @@ from gpgradpy.src import GaussianProcess
 np.set_printoptions(precision=2)
 
 list_kernel_types  = ['SqExp', 'Ma5f2', 'RatQu']
-list_wellcond_mtds = [None, 'req_vmin', 'precon']
+list_wellcond_mtds = ['base', 'rescale_origin', 'precon']
 
 # list_kernel_types  = ['SqExp']
 # list_wellcond_mtds = [None]
