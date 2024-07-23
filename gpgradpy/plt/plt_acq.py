@@ -118,18 +118,22 @@ str_acq_vec = [''] * n_acq
 acq_val_all = np.zeros((n_exa, n_acq))
 
 # Aquisition function: mean of surrogate
-str_acq_vec[0]   = r'$\mu_f$'
-acq_val_all[:,0] = calc_acq_upper_conf(gp_mu_all, gp_sig_all, beta = 0)
+idx = 0
+str_acq_vec[idx]   = r'$\mu_f$'
+acq_val_all[:,idx] = calc_acq_upper_conf(gp_mu_all, gp_sig_all, beta = 0)
+idx += 1
 
 # Aquisition function: upper confidence
 beta = 2
-str_acq_vec[1]   = rf'$\mu_f - {beta} \sigma_f$'
-acq_val_all[:,1] = calc_acq_upper_conf(gp_mu_all, gp_sig_all, beta = beta)
+str_acq_vec[idx]   = rf'$\mu_f - {beta} \sigma_f$'
+acq_val_all[:,idx] = calc_acq_upper_conf(gp_mu_all, gp_sig_all, beta = beta)
+idx += 1
 
 # # Acquisition function: expected improvement
 # fval_best        = np.min(obj_eval)
-# str_acq_vec[2]   = r'-$\int_{-\infty}^{f^*} \mathcal{N}(z;\mu_f(x), \sigma_f(x)) dz$'
-# acq_val_all[:,2] = calc_acq_exp_improvement(gp_mu_all, gp_sig_all, fval_best)
+# str_acq_vec[idx]   = r'-$\int_{-\infty}^{f^*} \mathcal{N}(z;\mu_f(x), \sigma_f(x)) dz$'
+# acq_val_all[:,idx] = calc_acq_exp_improvement(gp_mu_all, gp_sig_all, fval_best)
+# idx += 1
 
 min_acq_val = np.min(acq_val_all, axis=0)
 max_acq_val = np.max(acq_val_all, axis=0)

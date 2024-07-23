@@ -217,8 +217,8 @@ class calcLkdWNoise:
             mean_model_val, mean_model_hp_grad, hp_beta, hp_beta_grad \
                 = self.calc_mean_fun_wrt_hpara(Kcov_chofac, data_vec, Kcov_grad_hp)
         else:
-            mean_model_val = self.eval_mean_fun(x2model)
-            
+            raise Exception('This option is not available')
+            # mean_model_val = self.eval_mean_fun(x2model)
         
         # Calculate data_diff, ie the diff between the mean function and the data
         data_diff          = data_vec - mean_model_val
