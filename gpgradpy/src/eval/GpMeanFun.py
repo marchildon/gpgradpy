@@ -9,11 +9,56 @@ Created on Thu Oct 13 14:20:38 2022
 import numpy as np
 from scipy import linalg
 
+class GpMeanFunConst:
+    
+    def eval_mean_fun_const(self, x2model, beta_vec, bvec_use_grad = None,
+                            calc_grad = False, calc_hess = False):
+        
+        mean_fval  = beta_vec[0]
+        mean_fgrad = np.zeros(self.dim)             if calc_grad else None
+        mean_fhess = np.zeros((self.dim, self.dim)) if calc_hess else None
+            
+        return mean_fval, mean_fgrad, mean_fhess
+    
+    def eval_mean_fun_batch_const(self, x2model, beta_vec, bvec_use_grad = None,
+                                  calc_grad = False):
+        
+        nx, dim    = x2model.shape
+        mean_fval  = np.ones(nx) * beta_vec[0]
+        mean_fgrad = np.zeros((nx, dim)) if calc_grad else None
+            
+        return mean_fval, mean_fgrad
+    
+    def calc_mean_fun_wrt_hpara_const(self, K_chofac, data_vec, K_grad_hp = None):
+        
+        # Calculate hyperparameter that maximizes marginal log-likelihood
+        one_mod               = np.zeros(data_vec.size)
+        one_mod[:self.n_eval] = 1
+        
+        invK_one      = linalg.cho_solve(K_chofac, one_mod)
+        invK_data     = linalg.cho_solve(K_chofac, data_vec)
+        
+        denominator   = np.dot(one_mod, invK_one)
+        beta_star     = np.dot(data_vec, invK_one) / denominator
+        
+        # Evaluate the model with beta_star
+        model_val = one_mod * beta_star
+        
+        # Calculate gradients
+        if K_grad_hp is None:
+            beta_grad     = None
+            model_grad_hp = None
+        else:
+            beta_grad     = np.einsum('i,kij,j->k', beta_star * invK_one - invK_data, K_grad_hp, invK_one / denominator)
+            model_grad_hp = np.outer(one_mod, beta_grad)
+        
+        return model_val, model_grad_hp, beta_star, beta_grad
+
+        
 class GpMeanFunPoly:
     
-    def eval_mean_fun_poly(self, x2model, beta_vec, 
-                           bvec_use_grad = None,  bvec_use_hess = None,
-                           calc_grad     = False, calc_hess     = False):
+    def eval_mean_fun_poly(self, x2model, beta_vec, bvec_use_grad = None, 
+                           calc_grad = False, calc_hess = False):
         '''
         Parameters
         ----------
@@ -55,9 +100,6 @@ class GpMeanFunPoly:
             mean_fgrad = np.einsum('ijk,k->ji', vand_grad, beta_vec)
             
             if calc_hess:
-                if bvec_use_hess is not None:
-                    vand_hess = vand_hess[:,:, bvec_use_hess, :]
-                
                 mean_fhess = np.einsum('ijkl,l->kij', vand_hess, beta_vec)
             else:
                 mean_fhess = None
@@ -65,19 +107,25 @@ class GpMeanFunPoly:
             mean_fgrad = mean_fhess = None
             
         return mean_fval, mean_fgrad, mean_fhess
-        
-    def eval_mean_fun_qN(self, x2model):
-        
-        vec        = x2model - self._qN_xvec
-        hess_vec   = np.dot(self._qN_fhess, vec)
-        
-        mean_fval  = self._qN_fval + np.dot(self._qN_fgrad, vec) + 0.5* np.dot(vec, hess_vec)
-        mean_fgrad = self._qN_fgrad + hess_vec
-        mean_fhess = self._qN_fhess
-        
-        return mean_fval, mean_fgrad, mean_fhess
     
-    def calc_mean_fun_wrt_hpara_poly(self, K_chofac, data_vec, K_grad_hp):
+    def eval_mean_fun_batch_poly(self, x2model, beta_vec, bvec_use_grad = None,
+                                 calc_grad = False):
+        
+        x_scl    = self.get_scl_x_w_dist()[0]
+        vand_aug = self.calc_aug_vand(x_scl, bvec_use_grad)
+        
+        ''' Calculate the parameters and evaluate the model '''
+        
+        mean_fval = vand_aug @ beta_vec # Model value and its gradient wrt x
+        
+        if calc_grad:
+            raise Exception('This is not available')
+        else:
+            mean_fgrad = None
+        
+        return mean_fval, mean_fgrad
+    
+    def calc_mean_fun_wrt_hpara_poly(self, K_chofac, data_vec, K_grad_hp = None):
         '''
         Parameters
         ----------
@@ -108,10 +156,10 @@ class GpMeanFunPoly:
         
         x_scl       = self.get_scl_x_w_dist()[0]
         vand_aug    = self.calc_aug_vand(x_scl, self.bvec_use_grad)
-        n_data, n_beta_coeff = vand_aug.shape
-        
         invK_vand   = linalg.cho_solve(K_chofac, vand_aug)
         term1       = np.linalg.solve(vand_aug.T @ invK_vand, invK_vand.T)
+        
+        # n_data, n_beta_coeff = vand_aug.shape
         
         ''' Calculate the parameters and evaluate the model '''
         
@@ -131,23 +179,6 @@ class GpMeanFunPoly:
             model_grad_hp = vand_aug @ beta_grad 
         
         return model_val, model_grad_hp, beta, beta_grad
-    
-    # def calc_mean_fun_wrt_hpara_qN(self, K_chofac, data_vec, K_grad_hp, x2model):
-        
-    #     model_val = self.eval_mean_fun_qN(x2model)[0]
-        
-    #     beta      = None
-    #     beta_grad = None
-        
-    #     if K_grad_hp is None:
-    #         model_grad_hp = None
-    #         # beta_grad     = None
-    #     else:
-    #         n_hp          = K_grad_hp.shape[0]
-    #         model_grad_hp = np.zeros((0,n_hp))
-        
-    #     return model_val, model_grad_hp, beta, beta_grad
-        
     
     def calc_vand(self, x2model, calc_grad = False, calc_hess = False):
         '''
@@ -217,8 +248,81 @@ class GpMeanFunPoly:
             vand_aug = self.calc_vand(x2model, calc_grad = False)[0]
         
         return vand_aug
+
+
+class GpMeanFunQN:
     
-class GpMeanFun(GpMeanFunPoly):
+    def update_mean_fun_qN(self, n_eval, b_progress, xvec_new, fval_new, fgrad_new, tol_den = 1e-8):
+        
+        print(f'In update_mean_fun_qN, b_progress = {b_progress}, Hess =')
+        print(f'{self._qN_fhess}')
+        
+        if n_eval == 1:
+            self._qN_xvec  = np.copy(xvec_new)
+            self._qN_fval  = fval_new
+            self._qN_fgrad = np.copy(fgrad_new)
+            self._qN_fhess = np.eye(self.dim)
+        
+        elif b_progress:
+            yvec        = fgrad_new - self._qN_fgrad
+            svec        = xvec_new - self._qN_xvec
+            common      = yvec - self._qN_fhess @ svec 
+            denominator = common @ svec
+            test_term   = tol_den * np.linalg.norm(svec) * np.linalg.norm(common)
+            
+            if denominator >= test_term:
+                self._qN_xvec  = np.copy(xvec_new)
+                self._qN_fval  = fval_new
+                self._qN_fgrad = np.copy(fgrad_new)
+                self._qN_fhess += np.outer(common, common / (common @ svec))
+                
+    def eval_mean_fun_qN(self, x2model, calc_grad = True, calc_hess = False):
+        
+        if x2model.ndim == 1:
+            xdiff = x2model - self._qN_xvec
+        else:
+            xdiff = x2model[0,:] - self._qN_xvec
+        
+        hess_xdiff = self._qN_fhess @ xdiff
+        mean_fval  = self._qN_fval + np.dot(self._qN_fgrad, xdiff) + 0.5* np.dot(xdiff, hess_xdiff)
+        mean_fgrad = self._qN_fgrad + hess_xdiff if calc_grad else None
+        mean_fhess = self._qN_fhess              if calc_hess else None
+        
+        return mean_fval, mean_fgrad, mean_fhess
+        
+    def eval_mean_fun_batch_qN(self, xeval, calc_grad = True):
+        
+        xdiff      = (xeval - self._qN_xvec[None,:]).T
+        hess_xdiff = self._qN_fhess @ xdiff
+        
+        mean_fval  = self._qN_fval + np.dot(self._qN_fgrad, xdiff) + 0.5* np.diag(xdiff.T @ hess_xdiff)
+        mean_fgrad = self._qN_fgrad[None,:] + hess_xdiff.T if calc_grad else None
+        
+        return mean_fval, mean_fgrad
+    
+    def calc_mean_fun_wrt_hpara_qN(self, K_chofac, data_vec, K_grad_hp):
+        
+        # Evaluate the mean function
+        x_scl                 = self.get_scl_x_w_dist()[0]
+        mean_fval, mean_fgrad = self.eval_mean_fun_batch_qN(x_scl)
+        
+        if self.use_grad:
+            model_val = self.make_data_vec(mean_fval, mean_fgrad)
+        else:
+            model_val = mean_fval
+        
+        beta      = np.zeros(0)
+        beta_grad = np.zeros((0, self.dim))
+        
+        if K_grad_hp is None:
+            model_grad_hp = None
+        else:
+            n_hp          = K_grad_hp.shape[0]
+            model_grad_hp = np.zeros((0,n_hp))
+        
+        return model_val, model_grad_hp, beta, beta_grad
+    
+class GpMeanFun(GpMeanFunConst, GpMeanFunPoly, GpMeanFunQN):
     
     def set_mean_fun_op(self, mean_fun_type = 'poly_ord_0'):
         
@@ -228,31 +332,57 @@ class GpMeanFun(GpMeanFunPoly):
             self.n_beta_coeff    = 1 
             self.beta_var_npara  = self.n_beta_coeff
             self.optz_beta_w_lkd = True
+        elif 'poly' in self.mean_fun_type:
+            raise Exception('Method not tested')
         elif mean_fun_type == 'qN_SR1':
             self.n_beta_coeff    = 0 
             self.beta_var_npara  = self.n_beta_coeff
             self.optz_beta_w_lkd = False
+            self._qN_fhess       = np.eye(self.dim)
         else:
             raise Exception(f'mean_fun_type = {mean_fun_type} not available')
-            
-    def eval_mean_fun(self, x2model, beta_vec = None, 
-                      bvec_use_grad = None,  bvec_use_hess = None, 
-                      calc_grad     = False, calc_hess     = False):
+    
+    def update_mean_fun(self, n_eval, b_progress, xvec_new, fval_new, fgrad_new):
         
-        if 'poly' in self.mean_fun_type:
-            return self.eval_mean_fun_poly(x2model,       beta_vec, 
-                                           bvec_use_grad, bvec_use_hess, 
-                                           calc_grad,     calc_hess)
+        if self.mean_fun_type == 'qN_SR1':
+            self.update_mean_fun_qN(n_eval, b_progress, xvec_new, fval_new, fgrad_new)
+    
+    def eval_mean_fun(self, x2model, beta_vec = None, 
+                      bvec_use_grad = None, calc_grad = False, calc_hess = False):
+        
+        if self.mean_fun_type == 'poly_ord_0':
+            return self.eval_mean_fun_const(x2model,   beta_vec, bvec_use_grad, 
+                                            calc_grad, calc_hess)
+        elif 'poly' in self.mean_fun_type:
+            return self.eval_mean_fun_poly(x2model,   beta_vec, bvec_use_grad, 
+                                           calc_grad, calc_hess)
         elif self.mean_fun_type == 'qN_SR1':
-            return self.eval_mean_fun_poly(x2model)
+            return self.eval_mean_fun_qN(x2model, calc_grad, calc_hess)
+        else:
+            raise Exception('Unknown method')
+            
+    def eval_mean_fun_batch(self, x2model, beta_vec = None, 
+                            bvec_use_grad = None, calc_grad = False):
+        
+        if self.mean_fun_type == 'poly_ord_0':
+            return self.eval_mean_fun_batch_const(x2model, beta_vec, 
+                                                  bvec_use_grad, calc_grad)
+        
+        elif 'poly' in self.mean_fun_type:
+            return self.eval_mean_fun_batch_poly(x2model, beta_vec, 
+                                                 bvec_use_grad, calc_grad)
+        elif self.mean_fun_type == 'qN_SR1':
+            return self.eval_mean_fun_batch_qN(x2model, calc_grad)
         else:
             raise Exception('Unknown method')
             
     def calc_mean_fun_wrt_hpara(self, K_chofac, data_vec, K_grad_hp = None):
         
-        if 'poly' in self.mean_fun_type:
+        if self.mean_fun_type == 'poly_ord_0':
+            return self.calc_mean_fun_wrt_hpara_const(K_chofac, data_vec, K_grad_hp)
+        elif 'poly' in self.mean_fun_type:
             return self.calc_mean_fun_wrt_hpara_poly(K_chofac, data_vec, K_grad_hp)
-        
-        
+        elif self.mean_fun_type == 'qN_SR1':
+            return self.calc_mean_fun_wrt_hpara_qN(K_chofac, data_vec, K_grad_hp)
         else:
             raise Exception('Unknown method')

@@ -27,9 +27,10 @@ class GpEvalModel(GpMeanFun):
         x_scl, Rtensor        = self.get_scl_x_w_dist()
         fval_scl, _, grad_scl = self.get_scl_eval_data()[:3]
         
-        mean_fun_val, mean_fun_grad = self.eval_mean_fun(x_scl, self.hp_vals.beta, 
-                                                         bvec_use_grad = self.bvec_use_grad,
-                                                         calc_grad     = self.use_grad)[:2]
+        mean_fun_val, mean_fun_grad = \
+            self.eval_mean_fun_batch(x_scl, self.hp_vals.beta, 
+                                     bvec_use_grad = self.bvec_use_grad,
+                                     calc_grad     = self.use_grad)[:2]
         
         ''' Calculate the inverse matrix product '''
         

@@ -222,7 +222,7 @@ class GpHparaOptz(OptzLkd, GpHparaX0, GpHparaCon, GpHparaGrad):
         lkd_info, b_chofac_good = self.calc_lkd_all(hp_vals, calc_lkd = False, 
                                                     calc_cond = False, calc_grad = False)
         
-        hp_vals.beta = lkd_info.hp_beta 
+        hp_vals.beta = np.atleast_1d(lkd_info.hp_beta)
         
         if self.b_has_noisy_data is False:
             hp_vals.varK = lkd_info.hp_varK

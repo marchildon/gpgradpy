@@ -64,9 +64,12 @@ class GpParaDef:
         self.var_fval               = np.full(n_optz_max, np.nan)
         self.varK_var_fval          = np.full(n_optz_max, np.nan)
         
-        # # Quasi-Newton data
-        # if mean_fun_type == 'qN_SR1':
-        #     self.
+        # Quasi-Newton data
+        if not self.mean_fun_type == 'qN_SR1':
+            self._qN_xvec  = np.nan
+            self._qN_fval  = np.nan
+            self._qN_fgrad = np.nan
+            self._qN_fhess = np.nan
 
     def finish_optz_surr(self, n_optz_final):
         
@@ -171,6 +174,13 @@ class GpParaDef:
         # Misc
         self.var_fval[:idx]               = all_data[name + 'var_fval']
         self.varK_var_fval[:idx]          = all_data[name + 'varK_var_fval']
+        
+        # Quasi-Newton data
+        if self.mean_fun_type == 'qN_SR1':
+            self._qN_xvec  = all_data[name + 'qN_xvec']
+            self._qN_fval  = all_data[name + 'qN_fval']
+            self._qN_fgrad = all_data[name + 'qN_fgrad']
+            self._qN_fhess = all_data[name + 'qN_fhess']
 
     def export_data_surr(self, save2file=True, file2save=None, file2save_old=None):
         
@@ -209,7 +219,12 @@ class GpParaDef:
                      name + 'time_chofac_all'        : self.time_chofac_all,
                      #
                      name + 'var_fval'               : self.var_fval, 
-                     name + 'varK_var_fval'          : self.varK_var_fval
+                     name + 'varK_var_fval'          : self.varK_var_fval,
+                     #
+                     name + 'qN_xvec'                : self._qN_xvec, 
+                     name + 'qN_fval'                : self._qN_fval, 
+                     name + 'qN_fgrad'               : self._qN_fgrad, 
+                     name + 'qN_fhess'               : self._qN_fhess, 
                      }
 
         if save2file:
@@ -281,7 +296,7 @@ class GpParaDef:
             self.optz_max_init_cond_all[idx] = surr_optz_info['optz_max_init_cond']
             
         # Misc
-        self.var_fval[idx]      = np.var(self._fval_in)
+        self.var_fval[idx] = np.var(self._fval_in)
         
         if self.var_fval[idx] > 0:
             self.varK_var_fval[idx] = self.hp_varK_all[idx] / self.var_fval[idx]

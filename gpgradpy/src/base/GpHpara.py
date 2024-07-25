@@ -28,7 +28,7 @@ class GpHpara:
     def make_hp_class(self, beta = None, theta = None, kernel = None, 
                       varK = None, var_fval = None, var_fgrad = None):
         
-        return HparaOptzVal(beta, theta, kernel, varK, var_fval, var_fgrad)
+        return HparaOptzVal(np.atleast_1d(beta), np.atleast_1d(theta), kernel, varK, var_fval, var_fgrad)
     
     def set_hp_from_idx(self, i_optz):
         

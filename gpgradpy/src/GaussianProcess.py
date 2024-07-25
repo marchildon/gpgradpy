@@ -88,7 +88,6 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
                            'dflt_vmin',        # set min xdist to cond_dist_min_dflt
                            'dflt_vmax']        # set max xdist to cond_dist_max_dflt
     
-    
     cond_eta_set_mtd      = 'Kbase_eta' # Used if selected wellcond_mtd does not have a default method, ie wellcond_mtd == 'base'
                                       # 'Kbase_eta' : Use req eta for Kbase, ie eta =  n_eval / (cond_max - 1)
                                       # 'Kbase_eta_w_dim' : Use eta =  n_eval (dim + 1) / (cond_max - 1)
@@ -217,8 +216,8 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             self.b_use_data_scl = False
         
     def set_data(self, x_eval, fval, std_fval, 
-                 grad          = None, std_grad  = None, 
-                 bvec_use_grad = None, idx_xbest = None):
+                 grad           = None, std_grad  = None, 
+                 bvec_use_grad  = None, idx_xbest = None):
         '''
         Parameters
         ----------
@@ -330,6 +329,20 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
             self.b_has_noisy_data   = True  # Optimize varK numerically
         
         ''' Remaining setup '''
+        
+        b_progress = False if (idx_xbest is None) else (idx_xbest == (fval.size - 1))
+        
+        # if idx_xbest is None:
+        #     b_progress = False
+        # else:
+        #     b_progress = idx_xbest == (fval.size - 1)
+            
+        # print(f'b_progress = {b_progress}')
+        
+        if self.has_grad_info:
+            self.update_mean_fun(n_eval, b_progress, x_eval[-1,:], fval[-1], grad[-1,:])
+        else:
+            self.update_mean_fun(n_eval, b_progress, x_eval[-1,:], fval[-1])
         
         # Set min nugget 
         self._eta_Kbase, self._eta_Kgrad = self.calc_nugget(self.n_eval)

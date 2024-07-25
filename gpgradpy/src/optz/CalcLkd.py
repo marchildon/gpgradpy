@@ -213,12 +213,15 @@ class calcLkdWNoise:
         data_vec = self.make_data_vec(fval_scl, grad_scl)
         n_data   = data_vec.size
         
-        if self.n_beta_coeff > 0:
-            mean_model_val, mean_model_hp_grad, hp_beta, hp_beta_grad \
-                = self.calc_mean_fun_wrt_hpara(Kcov_chofac, data_vec, Kcov_grad_hp)
-        else:
-            raise Exception('This option is not available')
-            # mean_model_val = self.eval_mean_fun(x2model)
+        mean_model_val, mean_model_hp_grad, hp_beta, hp_beta_grad \
+            = self.calc_mean_fun_wrt_hpara(Kcov_chofac, data_vec, Kcov_grad_hp)
+        
+        # if self.n_beta_coeff > 0:
+        #     mean_model_val, mean_model_hp_grad, hp_beta, hp_beta_grad \
+        #         = self.calc_mean_fun_wrt_hpara(Kcov_chofac, data_vec, Kcov_grad_hp)
+        # else:
+        #     raise Exception('This option is not available')
+        #     # mean_model_val = self.eval_mean_fun(x2model)
         
         # Calculate data_diff, ie the diff between the mean function and the data
         data_diff          = data_vec - mean_model_val
