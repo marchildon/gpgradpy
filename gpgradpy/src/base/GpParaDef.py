@@ -131,7 +131,7 @@ class GpParaDef:
             all_data = np.load(file2load)
 
         name = self.surr_name
-        idx  = all_data[name + 'hp_beta_all'].size
+        idx  = all_data[name + 'eta_Kbase_all'].size
 
         # The hyper-parameters at each iteration
         self.hp_beta_all[:idx,:]          = all_data[name + 'hp_beta_all']

@@ -270,11 +270,11 @@ class GpMeanFunQN:
             denominator = common @ svec
             test_term   = tol_den * np.linalg.norm(svec) * np.linalg.norm(common)
             
-            if denominator >= test_term:
+            if np.abs(denominator) >= test_term:
                 self._qN_xvec  = np.copy(xvec_new)
                 self._qN_fval  = fval_new
                 self._qN_fgrad = np.copy(fgrad_new)
-                self._qN_fhess += np.outer(common, common / (common @ svec))
+                self._qN_fhess += np.outer(common, common / denominator)
                 
     def eval_mean_fun_qN(self, x2model, calc_grad = True, calc_hess = False):
         

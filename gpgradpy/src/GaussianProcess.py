@@ -332,13 +332,6 @@ class GaussianProcess(CommonFun, GpInfo, GpHpara, GpParaDef, GpWellCond,
         
         b_progress = False if (idx_xbest is None) else (idx_xbest == (fval.size - 1))
         
-        # if idx_xbest is None:
-        #     b_progress = False
-        # else:
-        #     b_progress = idx_xbest == (fval.size - 1)
-            
-        # print(f'b_progress = {b_progress}')
-        
         if self.has_grad_info:
             self.update_mean_fun(n_eval, b_progress, x_eval[-1,:], fval[-1], grad[-1,:])
         else:

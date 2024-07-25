@@ -28,6 +28,8 @@ class GpHparaX0:
             
         hp_x0, optz_bound = self.get_hp_x0_lhs_median(i_optz, hp_optz_info, n_x0)
         
+        assert np.sum(np.isnan(hp_x0)) == 0, 'There are nan values in hp_x0'
+        
         ''' Evaluate the likelihood at all starting points '''
         
         if self.lkd_optz_start_mtd == 'hp_best':
